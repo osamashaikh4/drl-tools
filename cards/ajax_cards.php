@@ -9,6 +9,9 @@ if (!is_logged_in()) {
     exit();
 }
 
+// Release the session lock so the parallel branch requests from one browser run concurrently.
+session_write_close();
+
 require_once __DIR__ . '/../conn.php';
 require_once __DIR__ . '/card_functions.php';
 

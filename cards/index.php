@@ -21,6 +21,15 @@ $actions = [
         'color' => 'indigo',
         'icon'  => 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z',
     ],
+    [
+        'title' => 'Check Card',
+        'tag'   => 'Lookup',
+        'note'  => 'Which branches have a card',
+        'link'  => 'check_card.php',
+        'cta'   => 'Check Card',
+        'color' => 'sky',
+        'icon'  => 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+    ],
 ];
 ?>
 
@@ -29,7 +38,7 @@ $actions = [
         <div class="relative z-10 max-w-3xl">
             <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">DRL Cards</h1>
             <p class="mt-3 text-base sm:text-lg text-emerald-100 font-normal">
-                Create discount cards with their holders on branches, or copy an existing card from one branch to many.
+                Create discount cards with their holders on branches, copy an existing card from one branch to many, or check which branches have a card.
             </p>
         </div>
         <div class="absolute right-0 bottom-0 opacity-15 pointer-events-none transform translate-x-10 translate-y-10">
@@ -37,7 +46,7 @@ $actions = [
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <?php foreach ($actions as $a): $c = $a['color']; ?>
             <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-<?= $c ?>-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
