@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userType       = 'LAB';
 
         if (empty($sourceEcode) || empty($targetBranches) || empty($userPassword)) {
-            $errorMsg = "Please select both a user and at least one target branch.";
+            $errorMsg = "Please select a user, at least one target branch and enter a password.";
         } else {
             $allStatus = [];
             foreach ($targetBranches as $bcode) {
@@ -46,6 +46,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Refill the form after a rejected submit so nothing has to be picked again (except the password).
+$old = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
+function field($key)
+{
+    global $old;
+    return htmlspecialchars(trim((string)($old[$key] ?? '')));
+}
+function chosen($key, $value)
+{
+    global $old;
+    $current = $old[$key] ?? null;
+    return is_array($current) ? (in_array((string)$value, $current, true) ? 'selected' : '') : ((string)$current === (string)$value ? 'selected' : '');
+}
+
 include __DIR__ . '/header.php';
 
 $branches  = get_branches_list($conn, $connections);
@@ -69,7 +83,7 @@ $employees = get_employees_list($main_conn);
         </div>
     <?php endif; ?>
 
-    <form action="copy_user.php" method="POST" class="space-y-6">
+    <form id="copyUserForm" action="copy_user.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
@@ -82,13 +96,13 @@ $employees = get_employees_list($main_conn);
                     <select required class="user_select w-full" name="ecode">
                         <option value="">Search or select employee...</option>
                         <?php foreach ($employees as $emp): ?>
-                            <option value="<?= htmlspecialchars($emp['ECODE']) ?>">
-                                <?= htmlspecialchars($emp['ENAME']) ?>
+                            <option value="<?= htmlspecialchars($emp['ECODE']) ?>" <?= chosen('ecode', $emp['ECODE']) ?>>
+                                <?= htmlspecialchars($emp['ENAME'] . ' (' . $emp['ECODE'] . ')') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 <?php else: ?>
-                    <input type="text" name="ecode" required placeholder="Enter ECODE manually (e.g. 1042)" class="w-full rounded-lg border-slate-300 border text-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" name="ecode" value="<?= field('ecode') ?>" required placeholder="Enter ECODE manually (e.g. 1042)" class="w-full rounded-lg border-slate-300 border text-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <p class="text-xs text-amber-600 mt-1">Note: Could not query employee list automatically from main branch database.</p>
                 <?php endif; ?>
                 <!-- <p class="text-xs text-slate-500 mt-2">Data will be pulled from <span class="font-mono text-slate-700 font-semibold">EMP</span>, <span class="font-mono text-slate-700 font-semibold">FSTARTUP</span>, <span class="font-mono text-slate-700 font-semibold">UROLES</span>, and <span class="font-mono text-slate-700 font-semibold">URPIVS</span> tables on the main branch.</p> -->
@@ -106,7 +120,7 @@ $employees = get_employees_list($main_conn);
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Target Branch <span class="text-red-500">*</span></label>
                 <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
                     <?php foreach ($branches as $bcode => $bname): ?>
-                        <option value="<?= htmlspecialchars($bcode) ?>"><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
+                        <option value="<?= htmlspecialchars($bcode) ?>" <?= chosen('bcode', $bcode) ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <!-- <p class="text-xs text-slate-500 mt-1.5">You can select one or multiple target branches to replicate this user simultaneously.</p> -->
@@ -143,14 +157,15 @@ $employees = get_employees_list($main_conn);
         </div>
 
         <div class="flex items-center justify-end gap-4 pt-4">
-            <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button id="copyButton" type="submit" class="px-8 py-3 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="copySpinner" class="spinner hidden" aria-hidden="true"></span>
+                <svg id="copyIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy User
+                <span id="copyLabel">Copy User</span>
             </button>
         </div>
     </form>
@@ -165,6 +180,27 @@ $employees = get_employees_list($main_conn);
         $('.branches_select').select2({
             placeholder: "Select target branches",
         });
+
+        // Enter in a field must not submit: one stray key would copy the user to every chosen branch.
+        const form = document.getElementById('copyUserForm');
+        form.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.matches('input:not([type="checkbox"]):not([type="submit"])')) e.preventDefault();
+        });
+
+        // Copying runs on the server before the results page loads: show it is working and block a second submit.
+        const copyButton = document.getElementById('copyButton');
+        function setCopying(on) {
+            copyButton.disabled = on;
+            document.getElementById('copySpinner').classList.toggle('hidden', !on);
+            document.getElementById('copyIcon').classList.toggle('hidden', on);
+            document.getElementById('copyLabel').textContent = on ? 'Copying…' : 'Copy User';
+        }
+        form.addEventListener('submit', function(e) {
+            if (copyButton.disabled) return e.preventDefault();
+            setCopying(true);
+        });
+        // Coming back with the browser's Back button can restore the page mid-"Copying…".
+        window.addEventListener('pageshow', function() { setCopying(false); });
     });
 </script>
 </body>
