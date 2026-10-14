@@ -66,6 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Refill the form after a rejected submit so nothing has to be typed again (except the password).
+$old = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
+function field($key)
+{
+    global $old;
+    return htmlspecialchars(trim((string)($old[$key] ?? '')));
+}
+function chosen($key, $value)
+{
+    global $old;
+    $current = $old[$key] ?? null;
+    return is_array($current) ? (in_array((string)$value, $current, true) ? 'selected' : '') : ((string)$current === (string)$value ? 'selected' : '');
+}
+
 include __DIR__ . '/header.php';
 
 $branches     = get_branches_list($conn, $connections);
@@ -91,7 +105,7 @@ $designations = get_designations_list($conn);
         </div>
     <?php endif; ?>
 
-    <form action="add_user.php" method="POST" class="space-y-8">
+    <form id="addUserForm" action="add_user.php" method="POST" class="space-y-8">
         <!-- Section 1: Branch Selection -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
@@ -102,7 +116,7 @@ $designations = get_designations_list($conn);
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Target Branch <span class="text-red-500">*</span></label>
                 <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
                     <?php foreach ($branches as $bcode => $bname): ?>
-                        <option value="<?= htmlspecialchars($bcode) ?>"><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
+                        <option value="<?= htmlspecialchars($bcode) ?>" <?= chosen('bcode', $bcode) ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <!-- <p class="text-xs text-slate-500 mt-1">Select one or multiple branches where this employee will be added.</p> -->
@@ -118,58 +132,58 @@ $designations = get_designations_list($conn);
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">ECODE <span class="text-red-500">*</span></label>
-                    <input type="text" name="ECODE" required placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="ECODE" value="<?= field('ECODE') ?>" required placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Title</label>
                     <select name="TITLE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                        <option value="">Select Title</option>
-                        <option value="Mr.">Mr.</option>
-                        <option value="Mrs.">Mrs.</option>
-                        <option value="Ms.">Ms.</option>
-                        <option value="Dr.">Dr.</option>
-                        <option value="Prof.">Prof.</option>
+                        <option value="" <?= chosen('TITLE', '') ?>>Select Title</option>
+                        <option value="Mr." <?= chosen('TITLE', 'Mr.') ?>>Mr.</option>
+                        <option value="Mrs." <?= chosen('TITLE', 'Mrs.') ?>>Mrs.</option>
+                        <option value="Ms." <?= chosen('TITLE', 'Ms.') ?>>Ms.</option>
+                        <option value="Dr." <?= chosen('TITLE', 'Dr.') ?>>Dr.</option>
+                        <option value="Prof." <?= chosen('TITLE', 'Prof.') ?>>Prof.</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name (ENAME)</label>
-                    <input type="text" name="ENAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="ENAME" value="<?= field('ENAME') ?>" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Father Name (EFNAME)</label>
-                    <input type="text" name="EFNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EFNAME" value="<?= field('EFNAME') ?>" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Surname</label>
-                    <input type="text" name="SURNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="SURNAME" value="<?= field('SURNAME') ?>" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Gender</label>
                     <select name="GENDER" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                        <option value="O">Other</option>
+                        <option value="M" <?= chosen('GENDER', 'M') ?>>Male</option>
+                        <option value="F" <?= chosen('GENDER', 'F') ?>>Female</option>
+                        <option value="O" <?= chosen('GENDER', 'O') ?>>Other</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">CNIC</label>
-                    <input type="text" name="CNIC" placeholder="41303-6964121-5" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="CNIC" value="<?= field('CNIC') ?>" placeholder="41303-6964121-5" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date of Birth (DOB)</label>
-                    <input type="date" name="DOB" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" name="DOB" value="<?= field('DOB') ?>" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date of Joining (DOJ)</label>
-                    <input type="date" name="DOJ" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" name="DOJ" value="<?= field('DOJ') ?>" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
         </div>
@@ -186,8 +200,11 @@ $designations = get_designations_list($conn);
                     <select name="DCODE" required class="tag_select w-full">
                         <option value="">Select Department</option>
                         <?php foreach ($departments as $dcode => $dname): ?>
-                            <option value="<?= htmlspecialchars($dcode) ?>"><?= htmlspecialchars($dname) ?></option>
+                            <option value="<?= htmlspecialchars($dcode) ?>" <?= chosen('DCODE', $dcode) ?>><?= htmlspecialchars($dname) ?></option>
                         <?php endforeach; ?>
+                        <?php if (field('DCODE') !== '' && !isset($departments[$old['DCODE']])): ?>
+                            <option value="<?= field('DCODE') ?>" selected><?= field('DCODE') ?></option>
+                        <?php endif; ?>
                     </select>
                 </div>
 
@@ -196,8 +213,11 @@ $designations = get_designations_list($conn);
                     <select name="EDCODE" required class="tag_select w-full">
                         <option value="">Select Designation</option>
                         <?php foreach ($designations as $edcode => $edname): ?>
-                            <option value="<?= htmlspecialchars($edcode) ?>"><?= htmlspecialchars($edname) ?></option>
+                            <option value="<?= htmlspecialchars($edcode) ?>" <?= chosen('EDCODE', $edcode) ?>><?= htmlspecialchars($edname) ?></option>
                         <?php endforeach; ?>
+                        <?php if (field('EDCODE') !== '' && !isset($designations[$old['EDCODE']])): ?>
+                            <option value="<?= field('EDCODE') ?>" selected><?= field('EDCODE') ?></option>
+                        <?php endif; ?>
                     </select>
                 </div>
 
@@ -216,7 +236,7 @@ $designations = get_designations_list($conn);
                     <select name="GRADE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
                         <option value="">Select Grade</option>
                         <?php for ($g = 1; $g <= 22; $g++): ?>
-                            <option value="BPS-<?= $g ?>">BPS-<?= $g ?></option>
+                            <option value="BPS-<?= $g ?>" <?= chosen('GRADE', 'BPS-' . $g) ?>>BPS-<?= $g ?></option>
                         <?php endfor; ?>
                     </select>
                 </div>
@@ -242,12 +262,12 @@ $designations = get_designations_list($conn);
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Username (EUNAME)</label>
-                    <input type="text" name="EUNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EUNAME" value="<?= field('EUNAME') ?>" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Display Name (EDISPLAYNAME)</label>
-                    <input type="text" name="EDISPLAYNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EDISPLAYNAME" value="<?= field('EDISPLAYNAME') ?>" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
@@ -258,7 +278,7 @@ $designations = get_designations_list($conn);
                 <!-- Incharge checkbox hidden for now -->
                 <div class="flex items-end pb-2.5">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="IS_INCHARGE" value="1" class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                        <input type="checkbox" name="IS_INCHARGE" value="1" <?= isset($old['IS_INCHARGE']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
                         <span class="text-sm font-semibold text-slate-800">Incharge</span>
                     </label>
                 </div>
@@ -280,11 +300,12 @@ $designations = get_designations_list($conn);
         </div>
 
         <div class="flex items-center justify-end gap-4 pt-4">
-            <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition">
-                Create User
+            <button id="createButton" type="submit" class="px-8 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="createSpinner" class="spinner hidden" aria-hidden="true"></span>
+                <span id="createLabel">Create User</span>
             </button>
         </div>
     </form>
@@ -310,6 +331,26 @@ $designations = get_designations_list($conn);
                 };
             }
         });
+
+        // Enter in a field must not submit: one stray key would create the user on every chosen branch.
+        const form = document.getElementById('addUserForm');
+        form.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.matches('input:not([type="checkbox"]):not([type="submit"])')) e.preventDefault();
+        });
+
+        // Creating runs on the server before the results page loads: show it is working and block a second submit.
+        const createButton = document.getElementById('createButton');
+        function setCreating(on) {
+            createButton.disabled = on;
+            document.getElementById('createSpinner').classList.toggle('hidden', !on);
+            document.getElementById('createLabel').textContent = on ? 'Creating…' : 'Create User';
+        }
+        form.addEventListener('submit', function(e) {
+            if (createButton.disabled) return e.preventDefault();
+            setCreating(true);
+        });
+        // Coming back with the browser's Back button can restore the page mid-"Creating…".
+        window.addEventListener('pageshow', function() { setCreating(false); });
     });
 </script>
 </body>
