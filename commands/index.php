@@ -68,21 +68,22 @@ include __DIR__ . "/header.php";
         scroll-margin-top: 2.5rem; /* keep the active cell clear of the sticky header */
     }
 
+    /* Windows selection blue. */
     #results td.cell-in-range {
-        background: #334155;
-        color: #f8fafc;
+        background: #0078d7;
+        color: #fff;
     }
 
     #results td.cell-selected {
-        background: #1e293b;
+        background: #005a9e;
         color: #fff;
-        box-shadow: inset 0 0 0 2px #94a3b8;
+        box-shadow: inset 0 0 0 2px #99d1ff;
     }
 
     /* NULL cells stay readable on the dark highlight. */
     #results td.cell-in-range[data-null],
     #results td.cell-selected[data-null] {
-        color: #cbd5e1;
+        color: #cce4f7;
     }
 
     .grid-table th,
