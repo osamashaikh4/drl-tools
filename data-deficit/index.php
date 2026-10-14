@@ -23,12 +23,15 @@ $branchNames = loadBranchNames($conn);
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">To</label>
                 <input type="date" id="pto" value="<?= htmlspecialchars($defaultTo) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             </div>
-            <button id="runCheck" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-5 py-2.5 rounded-lg shadow">Check All Branches</button>
+            <button id="runCheck" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-5 py-2.5 rounded-lg shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
             <label class="hidden items-center gap-2 pb-2.5 cursor-pointer">
                 <input type="checkbox" id="dryrun" class="h-4 w-4 rounded border-slate-300 text-blue-600">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Dry run (count only, no inserts)</span>
             </label>
-            <span id="progress" class="text-xs text-slate-500"></span>
+            <span id="progress" class="text-xs text-slate-500 tabular-nums"></span>
+        </div>
+        <div id="progressTrack" class="mt-5 h-1 rounded-full bg-slate-100 overflow-hidden opacity-0 transition-opacity">
+            <div id="progressBar" class="h-full bg-blue-600 origin-left" style="transform: scaleX(0)"></div>
         </div>
     </div>
 
@@ -46,12 +49,12 @@ $branchNames = loadBranchNames($conn);
             </thead>
             <tbody id="resultsBody">
                 <?php foreach ($connections as $bcode => $ip): ?>
-                    <tr id="row-<?= htmlspecialchars($bcode) ?>" data-bcode="<?= htmlspecialchars($bcode) ?>">
+                    <tr id="row-<?= htmlspecialchars($bcode) ?>" class="hover:bg-slate-50" data-bcode="<?= htmlspecialchars($bcode) ?>">
                         <td class="px-4 py-2.5 font-semibold text-slate-800"><?= htmlspecialchars($branchNames[$bcode] ?? $bcode) ?></td>
                         <td class="px-4 py-2.5 status-cell text-slate-400">Pending&hellip;</td>
-                        <td class="px-4 py-2.5 text-right pi-cell">&mdash;</td>
-                        <td class="px-4 py-2.5 text-right pb-cell">&mdash;</td>
-                        <td class="px-4 py-2.5 text-right pc-cell">&mdash;</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums pi-cell">&mdash;</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums pb-cell">&mdash;</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums pc-cell">&mdash;</td>
                         <td class="px-4 py-2.5 action-cell"></td>
                     </tr>
                 <?php endforeach; ?>
@@ -67,8 +70,30 @@ $branchNames = loadBranchNames($conn);
     #resultModal[data-state="closed"] { opacity: 0; transition-duration: 150ms; }
     #resultModal[data-state="closed"] .modal-panel { opacity: 0; transform: scale(0.95); transition-duration: 150ms; }
 
+    /* Progress fills with transform only (no layout); constant progress uses linear. */
+    #progressBar { transition: transform 200ms linear; }
+
+    /* A fast spinner makes the wait feel shorter. */
+    .spinner {
+        display: inline-block;
+        width: 0.75rem;
+        height: 0.75rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 9999px;
+        vertical-align: -0.1em;
+        animation: spin 600ms linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* A branch's result fades in when it arrives. */
+    .row-in { animation: row-in 200ms var(--ease-out); }
+    @keyframes row-in { from { opacity: 0.25; } }
+
     @media (prefers-reduced-motion: reduce) {
         #resultModal[data-state="closed"] .modal-panel { transform: none; }
+        .spinner { animation-duration: 1.6s; }
     }
 </style>
 <div id="resultModal" data-state="closed" class="hidden fixed inset-0 bg-slate-900/50 items-center justify-center px-4 z-50">

@@ -3,6 +3,8 @@
     const rows = Array.from(document.querySelectorAll('#resultsBody tr'));
     const runBtn = document.getElementById('runCheck');
     const progressEl = document.getElementById('progress');
+    const progressTrack = document.getElementById('progressTrack');
+    const progressBar = document.getElementById('progressBar');
     const resultsBody = document.getElementById('resultsBody');
     const modal = document.getElementById('resultModal');
     const modalTitle = document.getElementById('modalTitle');
@@ -53,6 +55,15 @@
         return `<span class="${cls}">${local} / ${branch}</span>`;
     }
 
+    const SPINNER = '<span class="spinner" aria-hidden="true"></span>';
+
+    // Results arrive one row at a time; fade the new values in so they don't just pop.
+    function reveal(row) {
+        row.classList.remove('row-in');
+        void row.offsetWidth; // restart the animation when a row is re-checked
+        row.classList.add('row-in');
+    }
+
     async function checkBranch(row) {
         const bcode = row.dataset.bcode;
         const statusCell = row.querySelector('.status-cell');
@@ -61,7 +72,7 @@
         const pcCell = row.querySelector('.pc-cell');
         const actionCell = row.querySelector('.action-cell');
 
-        statusCell.textContent = 'Checking…';
+        statusCell.innerHTML = SPINNER + ' Checking…';
         statusCell.className = 'px-4 py-2.5 status-cell text-amber-500';
 
         try {
@@ -125,6 +136,8 @@
             statusCell.className = 'px-4 py-2.5 status-cell text-red-600 font-semibold';
             statusCell.title = err.message;
             actionCell.innerHTML = '';
+        } finally {
+            reveal(row);
         }
     }
 
@@ -132,6 +145,8 @@
         runBtn.disabled = true;
         let done = 0;
         progressEl.textContent = `0 / ${rows.length}`;
+        progressTrack.classList.remove('opacity-0');
+        progressBar.style.transform = 'scaleX(0)';
         let idx = 0;
 
         async function worker() {
@@ -140,6 +155,7 @@
                 await checkBranch(row);
                 done++;
                 progressEl.textContent = `${done} / ${rows.length}`;
+                progressBar.style.transform = `scaleX(${done / rows.length})`;
             }
         }
 
@@ -165,7 +181,7 @@
 
         const originalText = btn.textContent;
         btn.disabled = true;
-        btn.textContent = dryRun ? 'Checking…' : 'Filling…';
+        btn.innerHTML = SPINNER + (dryRun ? ' Checking…' : ' Filling…');
 
         const row = btn.closest('tr');
         const verb = dryRun ? 'Dry run' : 'Filling';
