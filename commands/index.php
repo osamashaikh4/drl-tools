@@ -95,7 +95,44 @@ if (isset($_GET['err']) && $_GET['err']) {
     ";
 }
 include __DIR__ . "/header.php";
+
+$schema = commands_schema($conn);
 ?>
+<link rel="stylesheet" href="../assets/codemirror/codemirror.min.css">
+<link rel="stylesheet" href="../assets/codemirror/show-hint.min.css">
+<script src="../assets/codemirror/codemirror.min.js"></script>
+<script src="../assets/codemirror/sql.min.js"></script>
+<script src="../assets/codemirror/show-hint.min.js"></script>
+<script src="../assets/codemirror/sql-hint.min.js"></script>
+<style>
+    .CodeMirror {
+        height: auto;
+        min-height: 160px;
+        border-radius: 0.375rem;
+        box-shadow: inset 0 0 0 1px #d1d5db;
+        font-size: 14px;
+        padding: 4px 0;
+    }
+
+    .CodeMirror pre.CodeMirror-line,
+    .CodeMirror pre.CodeMirror-line-like {
+        padding: 0 12px;
+    }
+
+    .CodeMirror-focused {
+        box-shadow: inset 0 0 0 1px #3b82f6;
+    }
+
+    .CodeMirror-scroll {
+        min-height: 160px;
+    }
+
+    .CodeMirror-hints {
+        z-index: 60;
+        font-size: 13px;
+        max-height: 16em;
+    }
+</style>
 <div class="sm:mx-auto sm:w-full sm:max-w-sm">
     <img class="mx-auto h-28 w-auto" src="../drlogo.png" alt="Your Company">
 </div>
@@ -117,7 +154,7 @@ include __DIR__ . "/header.php";
             </div>
             <div class="flex flex-col gap-2 w-full">
                 <label class="font-semibold" for="command">Command</label>
-                <textarea required name="command" id="command" placeholder="Enter command" class="min-h-[120px] block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-1 focus:ring-blue-500 sm:text-sm sm:leading-6"></textarea>
+                <textarea name="command" id="command" placeholder="Enter command" class="min-h-[120px] block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-1 focus:ring-blue-500 sm:text-sm sm:leading-6"></textarea>
             </div>
             <button name="execute" value="true" class="mt-6 flex w-full items-center justify-center rounded-md border border-transparent bg-blue-500 px-8 py-3 text-base font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1">Execute</button>
         </form>
@@ -127,6 +164,49 @@ include __DIR__ . "/header.php";
     $(document).ready(function() {
         $('.branches_select').select2({
             placeholder: "Select a branch",
+        });
+
+        const schema = <?= json_encode($schema ?: new stdClass()) ?>;
+        const textarea = document.getElementById('command');
+        const editor = CodeMirror.fromTextArea(textarea, {
+            mode: 'text/x-plsql',
+            lineNumbers: false,
+            lineWrapping: true,
+            extraKeys: { 'Ctrl-Space': 'autocomplete' },
+            hintOptions: { tables: schema, completeSingle: false },
+        });
+
+        // Column suggestions follow the table of the statement under the cursor (INSERT INTO x / UPDATE x).
+        function statementTable() {
+            const text = editor.getValue();
+            const pos = editor.indexFromPos(editor.getCursor());
+            const start = text.lastIndexOf(';', pos - 1) + 1;
+            const end = text.indexOf(';', pos);
+            const stmt = text.slice(start, end === -1 ? text.length : end);
+            const m = stmt.match(/\b(?:INSERT\s+INTO|UPDATE)\s+([A-Za-z0-9_$#]+)/i);
+            const table = m ? m[1].toUpperCase() : null;
+            return table && schema[table] ? table : null;
+        }
+
+        editor.on('inputRead', function(cm, change) {
+            if (cm.state.completionActive || !/^[\w$#.]$/.test(change.text.join(''))) return;
+            const tokenType = cm.getTokenAt(cm.getCursor()).type || '';
+            if (/string|number|comment/.test(tokenType)) return;
+            cm.options.hintOptions.defaultTable = statementTable();
+            cm.showHint();
+        });
+        editor.on('cursorActivity', function(cm) {
+            cm.options.hintOptions.defaultTable = statementTable();
+        });
+
+        // The textarea is hidden by the editor, so check for an empty command here.
+        textarea.form.addEventListener('submit', function(e) {
+            editor.save();
+            if (!editor.getValue().trim()) {
+                e.preventDefault();
+                iziToast.error({ title: 'Error', message: 'Enter a command.' });
+                editor.focus();
+            }
         });
     });
 </script>

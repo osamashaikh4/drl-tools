@@ -1,5 +1,19 @@
 <?php
 
+// Tables and their columns ({TABLE: [COL, ...]}) for the editor's autocomplete. Branches share 253's schema.
+function commands_schema($conn)
+{
+    $stmt = oci_parse($conn, "SELECT c.TABLE_NAME, c.COLUMN_NAME FROM USER_TAB_COLUMNS c
+        JOIN USER_TABLES t ON t.TABLE_NAME = c.TABLE_NAME ORDER BY c.TABLE_NAME, c.COLUMN_ID");
+    $schema = [];
+    if ($stmt && @oci_execute($stmt)) {
+        while ($row = oci_fetch_assoc($stmt)) {
+            $schema[$row['TABLE_NAME']][] = $row['COLUMN_NAME'];
+        }
+    }
+    return $schema;
+}
+
 // Splits a SQL list on commas that are not inside quotes or parentheses.
 function split_sql_list($list)
 {
