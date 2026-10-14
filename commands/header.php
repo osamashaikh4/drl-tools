@@ -1,3 +1,3 @@
 <?php
-$pageTitle = 'DRL Commands';
+$pageTitle = 'Commands';
 include __DIR__ . '/../header.php';

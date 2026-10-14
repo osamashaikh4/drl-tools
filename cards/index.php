@@ -36,7 +36,7 @@ $actions = [
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
         <div class="relative z-10 max-w-3xl">
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">DRL Cards</h1>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Cards</h1>
             <p class="mt-3 text-base sm:text-lg text-emerald-100 font-normal">
                 Create discount cards with their holders on branches, copy an existing card from one branch to many, or check which branches have a card.
             </p>

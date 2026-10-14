@@ -16,7 +16,7 @@ $branches = get_branches_list($conn, $connections);
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Connected to Main Branch (10.1.52.253/drl)
             </span> -->
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">DRL Employee & User Management</h1>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Employee & User Management</h1>
             <p class="mt-3 text-base sm:text-lg text-blue-10/90 text-blue-100 font-normal">
                 Manage branch employee profiles, replicate user permissions across Oracle database clusters, and run system tasks seamlessly.
             </p>

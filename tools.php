@@ -6,7 +6,7 @@
 //   icon        - svg path data (24x24, stroke icons)
 return [
     'commands' => [
-        'name'        => 'DRL Commands',
+        'name'        => 'Commands',
         'description' => 'Run INSERT / UPDATE commands on one or many branch databases at once.',
         'folder'      => 'commands',
         'color'       => 'blue',
@@ -20,14 +20,14 @@ return [
         'icon'        => 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
     ],
     'users' => [
-        'name'        => 'DRL Users',
+        'name'        => 'Users',
         'description' => 'Add, copy, transfer employees and manage their database accounts.',
         'folder'      => 'users',
         'color'       => 'indigo',
         'icon'        => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
     ],
     'cards' => [
-        'name'        => 'DRL Cards',
+        'name'        => 'Cards',
         'description' => 'Create discount cards with holders, or copy cards from one branch to many.',
         'folder'      => 'cards',
         'color'       => 'emerald',

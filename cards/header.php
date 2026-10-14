@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'DRL Cards';
+$pageTitle = 'Cards';
 include __DIR__ . '/../header.php';
 
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -26,7 +26,7 @@ $cardLinks = [
 <div class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-4 h-14">
-            <span class="font-bold text-slate-900 tracking-tight hidden md:inline-block shrink-0">DRL Cards</span>
+            <span class="font-bold text-slate-900 tracking-tight hidden md:inline-block shrink-0">Cards</span>
             <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto">
                 <?php foreach ($cardLinks as $file => [$label, $icon]): ?>
                     <a href="<?= $file ?>" class="<?= $currentPage === $file ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' ?> px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5">
