@@ -50,7 +50,7 @@ $branches  = get_branches_list($conn, $connections);
 <div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
+            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">Manage User Account</h1>
@@ -67,7 +67,7 @@ $branches  = get_branches_list($conn, $connections);
     <form action="manage_user.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">1</span>
+                <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs flex items-center justify-center font-bold">1</span>
                 Select Branch
             </h2>
 
@@ -85,7 +85,7 @@ $branches  = get_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">2</span>
+                <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs flex items-center justify-center font-bold">2</span>
                 Select Employee
             </h2>
 
@@ -99,13 +99,13 @@ $branches  = get_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">3</span>
+                <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs flex items-center justify-center font-bold">3</span>
                 Reset Password
             </h2>
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">New Password</label>
-                <input type="password" name="new_password" placeholder="Only required to reset password" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
+                <input type="password" name="new_password" placeholder="Only required to reset password" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                 <!-- <p class="text-xs text-slate-500 mt-1.5">Runs <span class="font-mono text-slate-700">ALTER USER &lt;ECODE&gt; IDENTIFIED BY &lt;password&gt;</span> on each selected branch.</p> -->
             </div>
         </div>
@@ -120,7 +120,7 @@ $branches  = get_branches_list($conn, $connections);
                 </svg>
                 Unlock Account
             </button>
-            <button type="submit" name="do_reset" value="1" class="px-8 py-3 rounded-xl bg-drl-600 text-sm font-semibold text-white shadow-lg shadow-drl-500/20 hover:bg-drl-500 transition flex items-center gap-2">
+            <button type="submit" name="do_reset" value="1" class="px-8 py-3 rounded-xl bg-purple-600 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 hover:bg-purple-500 transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>

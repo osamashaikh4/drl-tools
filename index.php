@@ -6,10 +6,10 @@ include __DIR__ . '/header.php';
 ?>
 
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-    <div class="bg-gradient-to-r from-drl-600 via-drl-600 to-drl-700 rounded-3xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-3xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
         <div class="relative z-10 max-w-3xl">
             <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">DRL Tools</h1>
-            <p class="mt-3 text-base sm:text-lg text-drl-100 font-normal">
+            <p class="mt-3 text-base sm:text-lg text-blue-100 font-normal">
                 All DRL branch database tools in one place.
             </p>
         </div>

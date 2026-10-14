@@ -10,7 +10,7 @@ include __DIR__ . '/header.php';
                 <h1 class="text-2xl font-bold text-slate-900">Execution & Synchronization Results</h1>
                 <p class="text-sm text-slate-500">Summary of database operations executed across branch servers.</p>
             </div>
-            <a href="index.php" class="px-4 py-2 bg-drl-50 text-drl-600 rounded-xl text-sm font-semibold hover:bg-drl-100 transition-colors">
+            <a href="index.php" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors">
                 ← Back to Dashboard
             </a>
         </div>
@@ -43,7 +43,7 @@ include __DIR__ . '/header.php';
                                 </td>
                                 <td class="py-3.5 px-4 align-top">
                                     <?php if ($isDryRun): ?>
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-drl-50 text-drl-700 border border-drl-200/60 rounded-full text-xs font-medium">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 text-sky-700 border border-sky-200/60 rounded-full text-xs font-medium">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                             <?= htmlspecialchars($status['status']) ?>
                                         </span>
@@ -76,7 +76,7 @@ include __DIR__ . '/header.php';
         </div>
 
         <div class="mt-8 flex justify-center gap-4">
-            <a href="index.php" class="px-6 py-3 rounded-xl bg-drl-600 text-white text-sm font-semibold hover:bg-drl-500 transition-colors shadow-sm">
+            <a href="index.php" class="px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-sm">
                 Return to Dashboard
             </a>
             <a href="new_card.php" class="px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">

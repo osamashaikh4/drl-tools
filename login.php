@@ -48,17 +48,17 @@ include __DIR__ . '/header.php';
             <div class="space-y-4">
                 <div>
                     <label for="comname" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Username</label>
-                    <input id="comname" name="comname" type="text" required placeholder="Enter username" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 text-sm focus:ring-2 focus:ring-drl-500 focus:border-drl-500 shadow-sm transition">
+                    <input id="comname" name="comname" type="text" required placeholder="Enter username" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition">
                 </div>
 
                 <div>
                     <label for="compwd" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Password</label>
-                    <input id="compwd" name="compwd" type="password" autocomplete="current-password" required placeholder="••••••••" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 text-sm focus:ring-2 focus:ring-drl-500 focus:border-drl-500 shadow-sm transition">
+                    <input id="compwd" name="compwd" type="password" autocomplete="current-password" required placeholder="••••••••" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition">
                 </div>
             </div>
 
             <div>
-                <button type="submit" class="w-full flex justify-center py-3.5 px-4 rounded-xl bg-drl-600 hover:bg-drl-500 text-white font-semibold text-sm shadow-lg shadow-drl-500/25 transition">
+                <button type="submit" class="w-full flex justify-center py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 transition">
                     Sign in
                 </button>
             </div>

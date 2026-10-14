@@ -30,7 +30,7 @@ $userLinks = [
             <span class="font-bold text-slate-900 tracking-tight hidden md:inline-block shrink-0">User Portal</span>
             <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto">
                 <?php foreach ($userLinks as $file => [$label, $icon]): ?>
-                    <a href="<?= $file ?>" class="<?= $currentPage === $file ? 'bg-drl-50 text-drl-600 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' ?> px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5">
+                    <a href="<?= $file ?>" class="<?= $currentPage === $file ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' ?> px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
                         </svg>

@@ -124,7 +124,7 @@
                 actions += `<button class="fill-btn text-xs font-semibold text-white bg-orange-600 hover:bg-orange-500 px-2.5 py-1 rounded mr-1" data-bcode="${bcode}" data-group="A">Fill Group A</button>`;
             }
             if (pcDeficit) {
-                actions += `<button class="fill-btn text-xs font-semibold text-white bg-drl-600 hover:bg-drl-500 px-2.5 py-1 rounded" data-bcode="${bcode}" data-group="B">Fill Group B</button>`;
+                actions += `<button class="fill-btn text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 px-2.5 py-1 rounded" data-bcode="${bcode}" data-group="B">Fill Group B</button>`;
             }
             const allEqual = data.local.p_investigations === data.branch.p_investigations
                 && data.local.pbilling === data.branch.pbilling
