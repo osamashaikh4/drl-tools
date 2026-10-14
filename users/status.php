@@ -5,6 +5,15 @@ include __DIR__ . '/header.php';
 include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/user_functions.php';
 ?>
+<style>
+    /* Rows fade in with a short stagger (capped at 10 rows, so long results never wait). Decorative only. */
+    .result-row { animation: result-in 200ms var(--ease-out) both; }
+    @keyframes result-in { from { opacity: 0; } }
+
+    /* A truncated query can be clicked open to read it in full. */
+    .query-cell.is-truncated { cursor: pointer; }
+    .query-cell.is-open { white-space: pre-wrap; word-break: break-all; }
+</style>
 
 <div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
@@ -29,19 +38,19 @@ include_once __DIR__ . '/user_functions.php';
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-sm">
                     <?php if (isset($_SESSION['users_status']) && !empty($_SESSION['users_status'])): ?>
-                        <?php foreach ($_SESSION['users_status'] as $status): ?>
+                        <?php foreach ($_SESSION['users_status'] as $i => $status): ?>
                             <?php
                                 $isDryRun  = strpos(strtolower($status['status']), 'dry run') !== false;
                                 $isSuccess = (strpos(strtolower($status['status']), 'success') !== false || strpos(strtolower($status['status']), 'copied') !== false || strpos(strtolower($status['status']), 'created') !== false);
                                 $isNotice  = strpos(strtolower($status['status']), 'notice') !== false || strpos(strtolower($status['status']), 'already exists') !== false || strpos(strtolower($status['status']), 'skipped') !== false;
                             ?>
-                            <tr class="hover:bg-slate-50/70 transition-colors">
+                            <tr class="result-row hover:bg-slate-50/70" style="animation-delay: <?= min($i, 10) * 30 ?>ms">
                                 <td class="py-3.5 px-4 text-center font-bold text-slate-900 align-top">
                                     <span class="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-mono">
                                         <?= htmlspecialchars($status['bcode'] ?? 'N/A') ?>
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-4 font-mono text-xs text-slate-700 <?= $isDryRun ? 'whitespace-pre-wrap break-all' : 'max-w-md truncate' ?>" title="<?= htmlspecialchars($status['query'] ?? '') ?>">
+                                <td class="py-3.5 px-4 font-mono text-xs text-slate-700 <?= $isDryRun ? 'whitespace-pre-wrap break-all' : 'query-cell max-w-md truncate' ?>" title="<?= htmlspecialchars($status['query'] ?? '') ?>">
                                     <?= htmlspecialchars($status['query'] ?? 'N/A') ?>
                                 </td>
                                 <td class="py-3.5 px-4 align-top">
@@ -77,15 +86,23 @@ include_once __DIR__ . '/user_functions.php';
                 </tbody>
             </table>
         </div>
+        <script>
+            document.querySelectorAll('.query-cell').forEach((cell) => {
+                if (cell.scrollWidth <= cell.clientWidth) return;
+                cell.classList.add('is-truncated');
+                cell.title = 'Click to show the full query';
+                cell.addEventListener('click', () => cell.classList.toggle('is-open'));
+            });
+        </script>
 
         <div class="mt-8 flex justify-center gap-4">
-            <a href="index.php" class="px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-sm">
+            <a href="index.php" class="press px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-sm">
                 Return to Dashboard
             </a>
-            <a href="add_user.php" class="px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">
+            <a href="add_user.php" class="press px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">
                 Add Another User
             </a>
-            <a href="copy_user.php" class="px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">
+            <a href="copy_user.php" class="press px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">
                 Copy Another User
             </a>
         </div>
