@@ -17,12 +17,61 @@ $pageTitle   = $pageTitle ?? (isset($TOOLS[$currentTool]) ? $TOOLS[$currentTool]
     <script src="<?= $base ?>assets/js/tailwind.js"></script>
     <script>
         // hover: utilities only apply on devices with a real hover pointer (no sticky hover on touch).
-        tailwind.config = { future: { hoverOnlyWhenSupported: true } };
+        tailwind.config = {
+            future: { hoverOnlyWhenSupported: true },
+            theme: {
+                extend: {
+                    colors: {
+                        // DRL primary: the indigo of the logo ring (#261876 = drl-600).
+                        drl: { 50: '#f3f1fd', 100: '#e7e3fc', 200: '#d0c9f7', 300: '#aca1ed', 400: '#6b59cf', 500: '#342395', 600: '#261876', 700: '#1e135d', 800: '#170f48', 900: '#120b37', 950: '#0b0722' },
+                    },
+                },
+            },
+        };
     </script>
     <style>
         :root {
+            --drl: #261876;
+            --drl-50: #f3f1fd;
             --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
             --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        /* Third-party widgets in the DRL colour. */
+        input[type="checkbox"],
+        input[type="radio"] {
+            accent-color: var(--drl);
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected],
+        .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--drl) !important;
+        }
+
+        .daterangepicker td.active,
+        .daterangepicker td.active:hover {
+            background-color: var(--drl) !important;
+        }
+
+        .daterangepicker td.in-range:not(.active) {
+            background-color: var(--drl-50) !important;
+        }
+
+        .daterangepicker .drp-buttons .btn {
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+        }
+
+        .daterangepicker .drp-buttons .applyBtn {
+            background: var(--drl);
+            border-color: var(--drl);
+            color: #fff;
+        }
+
+        li.CodeMirror-hint-active {
+            background: var(--drl) !important;
         }
 
         /* Pressable things scale down slightly so a click feels acknowledged. */
@@ -99,7 +148,7 @@ $pageTitle   = $pageTitle ?? (isset($TOOLS[$currentTool]) ? $TOOLS[$currentTool]
 
 <body class="min-h-full font-sans antialiased text-slate-800 bg-slate-50">
     <?php if (is_logged_in()): ?>
-        <header class="bg-slate-900 text-white">
+        <header class="bg-drl-600 text-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-14 items-center gap-4">
                     <a href="<?= $base ?>index.php" class="flex items-center gap-2 shrink-0">

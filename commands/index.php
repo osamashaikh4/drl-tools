@@ -66,12 +66,12 @@ include __DIR__ . "/header.php";
     }
 
     #results td.cell-in-range {
-        background: #ecfdf5;
+        background: var(--drl-50);
     }
 
     #results td.cell-selected {
-        box-shadow: inset 0 0 0 2px #10b981;
-        background: #ecfdf5;
+        box-shadow: inset 0 0 0 2px var(--drl);
+        background: var(--drl-50);
     }
 
     .grid-table th,
@@ -102,7 +102,7 @@ include __DIR__ . "/header.php";
         <div class="p-4">
             <div class="relative">
                 <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input id="tableSearch" type="text" placeholder="Search tables..." class="w-full rounded-md border border-slate-300 pl-8 pr-3 py-1.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                <input id="tableSearch" type="text" placeholder="Search tables..." class="w-full rounded-md border border-slate-300 pl-8 pr-3 py-1.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-drl-500 focus:border-drl-500">
             </div>
         </div>
         <div class="px-5 pb-2 text-xs font-medium tracking-wider text-slate-500 uppercase">Tables <span id="tableCount" class="tabular-nums"></span></div>
@@ -118,7 +118,7 @@ include __DIR__ . "/header.php";
         <div id="resizeHandle" role="separator" aria-orientation="horizontal" aria-label="Resize results" tabindex="0" title="Drag to resize · double-click to reset"
             class="group relative h-0 shrink-0 cursor-row-resize focus:outline-none">
             <div class="absolute inset-x-0 -top-1.5 h-3 z-10"></div>
-            <div class="absolute inset-x-0 -top-px h-[3px] bg-transparent group-hover:bg-emerald-400 group-focus-visible:bg-emerald-500 transition-colors"></div>
+            <div class="absolute inset-x-0 -top-px h-[3px] bg-transparent group-hover:bg-drl-400 group-focus-visible:bg-drl-500 transition-colors"></div>
         </div>
 
         <!-- Results panel -->
@@ -137,20 +137,20 @@ include __DIR__ . "/header.php";
                         </button>
                         <div id="branchPopover" data-state="closed" class="absolute right-0 top-10 z-50 w-80 rounded-lg border border-slate-200 bg-white shadow-xl">
                             <div class="p-2 border-b border-slate-100 flex items-center gap-2">
-                                <input id="branchSearch" type="text" placeholder="Find branch..." class="flex-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
-                                <button type="button" data-select="all" class="text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded px-2 py-1.5">All</button>
+                                <input id="branchSearch" type="text" placeholder="Find branch..." class="flex-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-drl-500 focus:border-drl-500">
+                                <button type="button" data-select="all" class="text-xs font-medium text-drl-700 hover:bg-drl-50 rounded px-2 py-1.5">All</button>
                                 <button type="button" data-select="none" class="text-xs font-medium text-slate-600 hover:bg-slate-100 rounded px-2 py-1.5">None</button>
                             </div>
                             <div id="branchList" class="max-h-72 overflow-y-auto py-1"></div>
                         </div>
                     </div>
-                    <button id="runButton" type="button" class="h-8 flex items-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 px-3 text-sm font-medium text-white disabled:opacity-60 disabled:cursor-not-allowed">
+                    <button id="runButton" type="button" class="h-8 flex items-center gap-2 rounded-md bg-drl-600 hover:bg-drl-500 px-3 text-sm font-medium text-white disabled:opacity-60 disabled:cursor-not-allowed">
                         <span id="runLabel">Run</span>
-                        <kbd class="text-[11px] font-sans text-emerald-100">Ctrl ↵</kbd>
+                        <kbd class="text-[11px] font-sans text-drl-100">Ctrl ↵</kbd>
                     </button>
                 </div>
                 <div id="progressTrack" class="absolute left-0 right-0 bottom-0 h-0.5 overflow-hidden opacity-0 transition-opacity">
-                    <div id="progressBar" class="progress-bar h-full bg-emerald-500" style="transform: scaleX(0)"></div>
+                    <div id="progressBar" class="progress-bar h-full bg-drl-500" style="transform: scaleX(0)"></div>
                 </div>
             </div>
             <div id="results" class="flex-1 min-h-0 overflow-auto">
@@ -288,7 +288,7 @@ include __DIR__ . "/header.php";
             branchList.innerHTML = branches
                 .filter((b) => !f || (b.code + ' ' + b.name).toLowerCase().includes(f))
                 .map((b) => '<label class="flex items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-slate-50 cursor-pointer">'
-                    + '<input type="checkbox" value="' + esc(b.code) + '" ' + (selected.has(b.code) ? 'checked' : '') + ' class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">'
+                    + '<input type="checkbox" value="' + esc(b.code) + '" ' + (selected.has(b.code) ? 'checked' : '') + ' class="h-4 w-4 rounded border-slate-300 text-drl-600 focus:ring-drl-500">'
                     + '<span class="font-mono text-xs text-slate-500 tabular-nums">' + esc(b.code) + '</span><span class="truncate text-slate-800">' + esc(b.name) + '</span></label>')
                 .join('') || '<p class="px-3 py-2 text-sm text-slate-400">No branches match.</p>';
         }
@@ -350,7 +350,7 @@ include __DIR__ . "/header.php";
                 return '<section class="stmt border-b border-slate-200" data-i="' + i + '" data-kind="' + s.kind + '">'
                     + '<div class="sticky left-0 flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs">'
                     + (statements.length > 1 ? '<span class="text-slate-400 tabular-nums">#' + (i + 1) + '</span>' : '')
-                    + '<span class="font-semibold ' + (s.kind === 'select' ? 'text-sky-700' : 'text-amber-700') + '">' + label + '</span>'
+                    + '<span class="font-semibold ' + (s.kind === 'select' ? 'text-drl-700' : 'text-amber-700') + '">' + label + '</span>'
                     + '<span class="font-mono text-slate-500 truncate max-w-[60ch]" title="' + esc(s.sql) + '">' + esc(s.sql.replace(/\s+/g, ' ')) + '</span>'
                     + '<span class="stmt-count ml-auto text-slate-500 tabular-nums"></span></div>'
                     + (s.kind === 'select'
@@ -577,7 +577,7 @@ include __DIR__ . "/header.php";
             // Keyboard action: instant feedback, no animation.
             const before = summary.dataset.text ?? summary.textContent;
             summary.dataset.text = before;
-            summary.innerHTML = '<span class="text-emerald-700 font-medium">Copied</span>';
+            summary.innerHTML = '<span class="text-drl-700 font-medium">Copied</span>';
             clearTimeout(copiedTimer);
             copiedTimer = setTimeout(() => {
                 summary.textContent = summary.dataset.text;

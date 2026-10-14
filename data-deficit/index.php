@@ -22,15 +22,15 @@ $branchNames = loadBranchNames($conn);
                 <input type="hidden" id="pfrom" value="<?= htmlspecialchars($defaultFrom) ?>">
                 <input type="hidden" id="pto" value="<?= htmlspecialchars($defaultTo) ?>">
             </div>
-            <button id="runCheck" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-5 py-2.5 rounded-lg shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
+            <button id="runCheck" class="bg-drl-600 hover:bg-drl-500 text-white font-semibold text-sm px-5 py-2.5 rounded-lg shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
             <label class="hidden items-center gap-2 pb-2.5 cursor-pointer">
-                <input type="checkbox" id="dryrun" class="h-4 w-4 rounded border-slate-300 text-blue-600">
+                <input type="checkbox" id="dryrun" class="h-4 w-4 rounded border-slate-300 text-drl-600">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Dry run (count only, no inserts)</span>
             </label>
             <span id="progress" class="text-xs text-slate-500 tabular-nums"></span>
         </div>
         <div id="progressTrack" class="mt-5 h-1 rounded-full bg-slate-100 overflow-hidden opacity-0 transition-opacity">
-            <div id="progressBar" class="progress-bar h-full bg-blue-600" style="transform: scaleX(0)"></div>
+            <div id="progressBar" class="progress-bar h-full bg-drl-600" style="transform: scaleX(0)"></div>
         </div>
     </div>
 
@@ -81,7 +81,7 @@ $branchNames = loadBranchNames($conn);
         </div>
         <pre id="modalBody" class="text-xs text-slate-700 whitespace-pre-wrap break-words font-mono max-h-[70vh] overflow-auto bg-slate-50 border border-slate-200 rounded-lg p-3"></pre>
         <div class="mt-5 flex justify-end">
-            <button id="modalOk" type="button" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg">OK</button>
+            <button id="modalOk" type="button" class="bg-drl-600 hover:bg-drl-500 text-white text-sm font-semibold px-4 py-2 rounded-lg">OK</button>
         </div>
     </div>
 </div>

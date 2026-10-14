@@ -11,7 +11,7 @@ $iccode   = trim($_GET['iccode'] ?? '');
 
 <div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
-        <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
+        <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
             ← Back to Dashboard
         </a>
         <h1 class="text-2xl font-bold text-slate-900">Check Card</h1>
@@ -21,12 +21,12 @@ $iccode   = trim($_GET['iccode'] ?? '');
     <form id="checkForm" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6 flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[220px]">
             <label for="iccode" class="block text-sm font-semibold text-slate-700 mb-1">Card Number</label>
-            <input required type="text" id="iccode" name="iccode" maxlength="20" value="<?= htmlspecialchars($iccode) ?>" placeholder="e.g. A-R-NG-370" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+            <input required type="text" id="iccode" name="iccode" maxlength="20" value="<?= htmlspecialchars($iccode) ?>" placeholder="e.g. A-R-NG-370" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
         </div>
-        <button id="runCheck" type="submit" class="px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
+        <button id="runCheck" type="submit" class="px-6 py-2.5 rounded-lg bg-drl-600 hover:bg-drl-500 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
         <span id="progress" class="text-xs text-slate-500 pb-3 tabular-nums"></span>
         <div id="progressTrack" class="basis-full h-1 rounded-full bg-slate-100 overflow-hidden opacity-0 transition-opacity">
-            <div id="progressBar" class="progress-bar h-full bg-sky-600" style="transform: scaleX(0)"></div>
+            <div id="progressBar" class="progress-bar h-full bg-drl-600" style="transform: scaleX(0)"></div>
         </div>
     </form>
 
@@ -127,7 +127,7 @@ $iccode   = trim($_GET['iccode'] ?? '');
                     'status-cell': active ? '<span class="text-emerald-600 font-semibold">Active</span>' : '<span class="text-red-600 font-semibold">' + esc(c.ICSTATUS || 'blank') + '</span>',
                     'expiry-cell': esc(c.EXPIRY || ''),
                     'holders-cell': data.holders.length
-                        ? '<details><summary class="cursor-pointer text-sky-700 font-semibold">' + data.holders.length + ' holder' + (data.holders.length === 1 ? '' : 's') + '</summary><div class="mt-1 text-xs space-y-0.5">' + holderList + '</div></details>'
+                        ? '<details><summary class="cursor-pointer text-drl-700 font-semibold">' + data.holders.length + ' holder' + (data.holders.length === 1 ? '' : 's') + '</summary><div class="mt-1 text-xs space-y-0.5">' + holderList + '</div></details>'
                         : '<span class="text-amber-600">none</span>',
                 });
             } catch (err) {

@@ -78,7 +78,7 @@ $branches = get_branches_list($conn, $connections);
 <div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
+            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">Transfer Employee</h1>
@@ -95,7 +95,7 @@ $branches = get_branches_list($conn, $connections);
     <form action="transfer_user.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs flex items-center justify-center font-bold">1</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">1</span>
                 Select Source Branch
             </h2>
 
@@ -113,7 +113,7 @@ $branches = get_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs flex items-center justify-center font-bold">2</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">2</span>
                 Select Employee
             </h2>
 
@@ -127,7 +127,7 @@ $branches = get_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs flex items-center justify-center font-bold">3</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">3</span>
                 Select Target Branch
             </h2>
 
@@ -144,13 +144,13 @@ $branches = get_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs flex items-center justify-center font-bold">4</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">4</span>
                 Account Credentials
             </h2>
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Password <span class="text-red-500">*</span></label>
-                <input required type="password" name="user_password" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <input required type="password" name="user_password" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
             </div>
         </div>
 
@@ -158,7 +158,7 @@ $branches = get_branches_list($conn, $connections);
             <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-500 transition flex items-center gap-2">
+            <button type="submit" class="px-8 py-3 rounded-xl bg-drl-600 text-sm font-semibold text-white shadow-lg shadow-drl-500/20 hover:bg-drl-500 transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
                 </svg>

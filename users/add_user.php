@@ -77,7 +77,7 @@ $designations = get_designations_list($conn);
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
+            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">Add New User / Employee</h1>
@@ -95,7 +95,7 @@ $designations = get_designations_list($conn);
         <!-- Section 1: Branch Selection -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-bold">1</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">1</span>
                 Branch Selection
             </h2>
             <div>
@@ -112,18 +112,18 @@ $designations = get_designations_list($conn);
         <!-- Section 2: Personal Information -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">2</span>
                 Personal Information
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">ECODE <span class="text-red-500">*</span></label>
-                    <input type="text" name="ECODE" required placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="ECODE" required placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Title</label>
-                    <select name="TITLE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <select name="TITLE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500 bg-white">
                         <option value="">Select Title</option>
                         <option value="Mr.">Mr.</option>
                         <option value="Mrs.">Mrs.</option>
@@ -135,22 +135,22 @@ $designations = get_designations_list($conn);
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name (ENAME)</label>
-                    <input type="text" name="ENAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="ENAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Father Name (EFNAME)</label>
-                    <input type="text" name="EFNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EFNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Surname</label>
-                    <input type="text" name="SURNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="SURNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Gender</label>
-                    <select name="GENDER" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <select name="GENDER" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500 bg-white">
                         <option value="M">Male</option>
                         <option value="F">Female</option>
                         <option value="O">Other</option>
@@ -159,17 +159,17 @@ $designations = get_designations_list($conn);
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">CNIC</label>
-                    <input type="text" name="CNIC" placeholder="41303-6964121-5" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="CNIC" placeholder="41303-6964121-5" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date of Birth (DOB)</label>
-                    <input type="date" name="DOB" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" name="DOB" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date of Joining (DOJ)</label>
-                    <input type="date" name="DOJ" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" name="DOJ" placeholder="YYYY-MM-DD" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
             </div>
         </div>
@@ -177,7 +177,7 @@ $designations = get_designations_list($conn);
         <!-- Section 3: Employment Details -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-bold">3</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">3</span>
                 Employment & Organizational Details
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
@@ -213,7 +213,7 @@ $designations = get_designations_list($conn);
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Grade</label>
-                    <select name="GRADE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <select name="GRADE" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500 bg-white">
                         <option value="">Select Grade</option>
                         <?php for ($g = 1; $g <= 22; $g++): ?>
                             <option value="BPS-<?= $g ?>">BPS-<?= $g ?></option>
@@ -224,7 +224,7 @@ $designations = get_designations_list($conn);
                 <!-- Status (ESTATUS) dropdown hidden — defaults to 'Y' (Active) in the POST handler
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Status (ESTATUS)</label>
-                    <select name="ESTATUS" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <select name="ESTATUS" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500 bg-white">
                         <option value="Y">Active</option>
                         <option value="N">Inactive</option>
                     </select>
@@ -236,29 +236,29 @@ $designations = get_designations_list($conn);
         <!-- Section 4: Account & Database Credentials -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-bold">4</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">4</span>
                 System & Database Account
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Username (EUNAME)</label>
-                    <input type="text" name="EUNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EUNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Display Name (EDISPLAYNAME)</label>
-                    <input type="text" name="EDISPLAYNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="EDISPLAYNAME" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Password</label>
-                    <input type="password" name="user_password" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="password" name="user_password" placeholder="" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500">
                 </div>
 
                 <!-- Incharge checkbox hidden for now -->
                 <div class="flex items-end pb-2.5">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="IS_INCHARGE" value="1" class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                        <input type="checkbox" name="IS_INCHARGE" value="1" class="w-4 h-4 rounded text-drl-600 border-slate-300 focus:ring-drl-500">
                         <span class="text-sm font-semibold text-slate-800">Incharge</span>
                     </label>
                 </div>
@@ -272,7 +272,7 @@ $designations = get_designations_list($conn);
 
                 <div class="sm:col-span-2 md:col-span-3 pt-2 invisible h-0 w-0">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="create_db_user" value="1" checked class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                        <input type="checkbox" name="create_db_user" value="1" checked class="w-4 h-4 rounded text-drl-600 border-slate-300 focus:ring-drl-500">
                         <!-- <span class="text-sm font-semibold text-slate-800">Create Oracle Database User account with EUNAME / ECODE</span> -->
                     </label>
                 </div>
@@ -283,7 +283,7 @@ $designations = get_designations_list($conn);
             <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition">
+            <button type="submit" class="px-8 py-3 rounded-xl bg-drl-600 text-sm font-semibold text-white shadow-lg shadow-drl-500/20 hover:bg-drl-500 transition">
                 Create User
             </button>
         </div>

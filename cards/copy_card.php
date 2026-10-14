@@ -59,7 +59,7 @@ $branches = card_branches_list($conn, $connections);
 <div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
+            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">Copy Card</h1>
@@ -76,7 +76,7 @@ $branches = card_branches_list($conn, $connections);
     <form action="copy_card.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">1</span>
                 Source
             </h2>
             <div class="space-y-5">
@@ -99,7 +99,7 @@ $branches = card_branches_list($conn, $connections);
 
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">2</span>
+                <span class="w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold">2</span>
                 Select Target Branch(es)
             </h2>
             <div>
@@ -115,14 +115,14 @@ $branches = card_branches_list($conn, $connections);
 
         <div class="flex items-center justify-between gap-4 pt-4">
             <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="dry_run" value="1" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
+                <input type="checkbox" name="dry_run" value="1" class="w-4 h-4 rounded text-drl-600 border-slate-300 focus:ring-drl-500">
                 <span class="text-sm font-semibold text-slate-700">Dry run <span class="font-normal text-slate-500">(show the inserts, change nothing)</span></span>
             </label>
             <div class="flex items-center gap-4">
                 <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition flex items-center gap-2">
+                <button type="submit" class="px-8 py-3 rounded-xl bg-drl-600 text-sm font-semibold text-white shadow-lg shadow-drl-500/20 hover:bg-drl-500 transition flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>

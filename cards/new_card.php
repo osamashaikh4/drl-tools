@@ -159,9 +159,9 @@ foreach ((array)($old['family'] ?? []) as $f) {
     }
 }
 
-$input  = 'w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500';
+$input  = 'w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-drl-500 focus:border-drl-500';
 $label  = 'block text-sm font-semibold text-slate-700 mb-1';
-$step   = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex items-center justify-center font-bold';
+$step   = 'w-6 h-6 rounded-full bg-drl-100 text-drl-600 text-xs flex items-center justify-center font-bold';
 $panel  = 'bg-white rounded-2xl p-6 border border-slate-200 shadow-sm';
 $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2';
 ?>
@@ -169,7 +169,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
+            <a href="index.php" class="text-xs font-semibold text-slate-500 hover:text-drl-600 flex items-center gap-1 mb-2">
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">New Card</h1>
@@ -335,7 +335,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
         <div class="<?= $panel ?>">
             <h2 class="<?= $title ?> justify-between">
                 <span class="flex items-center gap-2"><span class="<?= $step ?>">4</span> Family Members</span>
-                <button type="button" id="addFamily" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg">+ Add Member</button>
+                <button type="button" id="addFamily" class="text-xs font-semibold text-drl-700 bg-drl-50 hover:bg-drl-100 px-3 py-1.5 rounded-lg">+ Add Member</button>
             </h2>
             <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Enter the name only — the relation is added in front automatically (e.g. <span class="font-mono text-slate-700">Wife= Farzana</span>).</p>
             <div id="familyRows" class="space-y-3"></div>
@@ -344,14 +344,14 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 
         <div class="flex items-center justify-between gap-4 pt-4">
             <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="dry_run" value="1" <?= isset($old['dry_run']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                <input type="checkbox" name="dry_run" value="1" <?= isset($old['dry_run']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-drl-600 border-slate-300 focus:ring-drl-500">
                 <span class="text-sm font-semibold text-slate-700">Dry run <span class="font-normal text-slate-500">(show the inserts, change nothing)</span></span>
             </label>
             <div class="flex items-center gap-4">
                 <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition flex items-center gap-2">
+                <button type="submit" class="px-8 py-3 rounded-xl bg-drl-600 text-sm font-semibold text-white shadow-lg shadow-drl-500/20 hover:bg-drl-500 transition flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
