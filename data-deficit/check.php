@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../auth.php';
+
+// Release the session lock so the parallel branch checks from one browser run concurrently.
+session_write_close();
+
 require_once __DIR__ . '/../conn.php';
 require_once __DIR__ . '/deficit_lib.php';
 
