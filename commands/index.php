@@ -16,6 +16,9 @@ while ($row = oci_fetch_assoc($r)) {
 
 $schema = commands_schema($conn);
 
+// The tables sidebar is hidden for now; set to true to bring back the toggle button and sidebar.
+$showTableSidebar = false;
+
 include __DIR__ . "/header.php";
 ?>
 <link rel="stylesheet" href="../assets/codemirror/codemirror.min.css">
@@ -92,6 +95,7 @@ include __DIR__ . "/header.php";
 </style>
 
 <div class="flex h-[calc(100vh-3.5rem)] bg-white">
+    <?php if ($showTableSidebar): ?>
     <!-- Rail with the button that shows / hides the tables sidebar (collapsed by default). -->
     <div class="w-12 shrink-0 flex flex-col items-center py-3 border-r border-slate-200">
         <button id="sidebarToggle" type="button" aria-controls="tableSidebar" aria-expanded="false" title="Show tables" class="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
@@ -116,6 +120,7 @@ include __DIR__ . "/header.php";
         <div class="px-5 pb-2 text-xs font-medium tracking-wider text-slate-500 uppercase">Tables <span id="tableCount" class="tabular-nums"></span></div>
         <div id="tableList" class="flex-1 overflow-y-auto pb-4 text-sm"></div>
     </aside>
+    <?php endif; ?>
 
     <main id="workArea" class="flex-1 min-w-0 flex flex-col">
         <div class="flex-1 min-h-0 relative">
@@ -216,63 +221,66 @@ include __DIR__ . "/header.php";
             editor.focus();
         }
 
-        // ---------- Sidebar ----------
-        const tableList = document.getElementById('tableList');
-        const tableNames = Object.keys(schema).sort();
+        // Tables sidebar (off while $showTableSidebar is false).
+        if (<?= $showTableSidebar ? 'true' : 'false' ?>) {
+            // ---------- Sidebar ----------
+            const tableList = document.getElementById('tableList');
+            const tableNames = Object.keys(schema).sort();
 
-        function renderTables(filter) {
-            const f = filter.trim().toUpperCase();
-            const names = f ? tableNames.filter((t) => t.includes(f)) : tableNames;
-            document.getElementById('tableCount').textContent = '(' + names.length + ')';
-            tableList.innerHTML = names.map((t) =>
-                '<div class="table-item" data-table="' + esc(t) + '">'
-                + '<div class="flex items-center hover:bg-slate-100">'
-                + '<button type="button" class="toggle px-2 py-1.5 text-slate-400 hover:text-slate-700" title="Show columns">'
-                + '<svg class="chev w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>'
-                + '<button type="button" class="insert flex-1 text-left py-1.5 pr-4 font-mono text-[13px] text-slate-700 truncate" title="Insert ' + esc(t) + '">' + esc(t) + '</button>'
-                + '</div><div class="cols hidden pl-9 pb-1"></div></div>'
-            ).join('') || '<p class="px-5 py-2 text-slate-400">No tables match.</p>';
-        }
-
-        tableList.addEventListener('click', (e) => {
-            const item = e.target.closest('.table-item');
-            if (!item) return;
-            const table = item.dataset.table;
-            if (e.target.closest('.insert')) return insertAtCursor(table);
-            if (e.target.closest('.col')) return insertAtCursor(e.target.closest('.col').dataset.col);
-            if (e.target.closest('.toggle')) {
-                const cols = item.querySelector('.cols');
-                if (!cols.innerHTML) {
-                    cols.innerHTML = schema[table].map((c) => '<button type="button" class="col block w-full text-left py-1 pr-4 font-mono text-xs text-slate-500 hover:text-slate-900 truncate" data-col="' + esc(c) + '">' + esc(c) + '</button>').join('');
-                }
-                cols.classList.toggle('hidden');
-                item.querySelector('.chev').classList.toggle('rotate-90');
+            function renderTables(filter) {
+                const f = filter.trim().toUpperCase();
+                const names = f ? tableNames.filter((t) => t.includes(f)) : tableNames;
+                document.getElementById('tableCount').textContent = '(' + names.length + ')';
+                tableList.innerHTML = names.map((t) =>
+                    '<div class="table-item" data-table="' + esc(t) + '">'
+                    + '<div class="flex items-center hover:bg-slate-100">'
+                    + '<button type="button" class="toggle px-2 py-1.5 text-slate-400 hover:text-slate-700" title="Show columns">'
+                    + '<svg class="chev w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>'
+                    + '<button type="button" class="insert flex-1 text-left py-1.5 pr-4 font-mono text-[13px] text-slate-700 truncate" title="Insert ' + esc(t) + '">' + esc(t) + '</button>'
+                    + '</div><div class="cols hidden pl-9 pb-1"></div></div>'
+                ).join('') || '<p class="px-5 py-2 text-slate-400">No tables match.</p>';
             }
-        });
-        document.getElementById('tableSearch').addEventListener('input', (e) => renderTables(e.target.value));
-        renderTables('');
 
-        // Collapsed unless the user opened it last time. No animation: it's toggled often.
-        const SIDEBAR_KEY = 'commands.sidebarOpen';
-        const sidebar = document.getElementById('tableSidebar');
-        const sidebarToggle = document.getElementById('sidebarToggle');
+            tableList.addEventListener('click', (e) => {
+                const item = e.target.closest('.table-item');
+                if (!item) return;
+                const table = item.dataset.table;
+                if (e.target.closest('.insert')) return insertAtCursor(table);
+                if (e.target.closest('.col')) return insertAtCursor(e.target.closest('.col').dataset.col);
+                if (e.target.closest('.toggle')) {
+                    const cols = item.querySelector('.cols');
+                    if (!cols.innerHTML) {
+                        cols.innerHTML = schema[table].map((c) => '<button type="button" class="col block w-full text-left py-1 pr-4 font-mono text-xs text-slate-500 hover:text-slate-900 truncate" data-col="' + esc(c) + '">' + esc(c) + '</button>').join('');
+                    }
+                    cols.classList.toggle('hidden');
+                    item.querySelector('.chev').classList.toggle('rotate-90');
+                }
+            });
+            document.getElementById('tableSearch').addEventListener('input', (e) => renderTables(e.target.value));
+            renderTables('');
 
-        function setSidebar(open, focusSearch = true) {
-            sidebar.classList.toggle('hidden', !open);
-            sidebar.classList.toggle('flex', open);
-            sidebarToggle.setAttribute('aria-expanded', String(open));
-            sidebarToggle.title = open ? 'Hide tables' : 'Show tables';
-            sidebarToggle.classList.toggle('bg-slate-100', open);
-            sidebarToggle.classList.toggle('text-slate-900', open);
-            try { localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0'); } catch (e) {}
-            editor.refresh(); // the editor's width changed
-            if (open && focusSearch) document.getElementById('tableSearch').focus();
+            // Collapsed unless the user opened it last time. No animation: it's toggled often.
+            const SIDEBAR_KEY = 'commands.sidebarOpen';
+            const sidebar = document.getElementById('tableSidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+
+            function setSidebar(open, focusSearch = true) {
+                sidebar.classList.toggle('hidden', !open);
+                sidebar.classList.toggle('flex', open);
+                sidebarToggle.setAttribute('aria-expanded', String(open));
+                sidebarToggle.title = open ? 'Hide tables' : 'Show tables';
+                sidebarToggle.classList.toggle('bg-slate-100', open);
+                sidebarToggle.classList.toggle('text-slate-900', open);
+                try { localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0'); } catch (e) {}
+                editor.refresh(); // the editor's width changed
+                if (open && focusSearch) document.getElementById('tableSearch').focus();
+            }
+
+            sidebarToggle.addEventListener('click', () => setSidebar(sidebar.classList.contains('hidden')));
+            let sidebarOpen = false;
+            try { sidebarOpen = localStorage.getItem(SIDEBAR_KEY) === '1'; } catch (e) {}
+            if (sidebarOpen) setSidebar(true, false);
         }
-
-        sidebarToggle.addEventListener('click', () => setSidebar(sidebar.classList.contains('hidden')));
-        let sidebarOpen = false;
-        try { sidebarOpen = localStorage.getItem(SIDEBAR_KEY) === '1'; } catch (e) {}
-        if (sidebarOpen) setSidebar(true, false);
 
         // ---------- Branch picker ----------
         const STORE_KEY = 'commands.branches';
