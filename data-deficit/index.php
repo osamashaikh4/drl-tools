@@ -31,7 +31,7 @@ $branchNames = loadBranchNames($conn);
             <span id="progress" class="text-xs text-slate-500 tabular-nums"></span>
         </div>
         <div id="progressTrack" class="mt-5 h-1 rounded-full bg-slate-100 overflow-hidden opacity-0 transition-opacity">
-            <div id="progressBar" class="h-full bg-blue-600 origin-left" style="transform: scaleX(0)"></div>
+            <div id="progressBar" class="progress-bar h-full bg-blue-600" style="transform: scaleX(0)"></div>
         </div>
     </div>
 
@@ -70,30 +70,8 @@ $branchNames = loadBranchNames($conn);
     #resultModal[data-state="closed"] { opacity: 0; transition-duration: 150ms; }
     #resultModal[data-state="closed"] .modal-panel { opacity: 0; transform: scale(0.95); transition-duration: 150ms; }
 
-    /* Progress fills with transform only (no layout); constant progress uses linear. */
-    #progressBar { transition: transform 200ms linear; }
-
-    /* A fast spinner makes the wait feel shorter. */
-    .spinner {
-        display: inline-block;
-        width: 0.75rem;
-        height: 0.75rem;
-        border: 2px solid currentColor;
-        border-right-color: transparent;
-        border-radius: 9999px;
-        vertical-align: -0.1em;
-        animation: spin 600ms linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* A branch's result fades in when it arrives. */
-    .row-in { animation: row-in 200ms var(--ease-out); }
-    @keyframes row-in { from { opacity: 0.25; } }
-
     @media (prefers-reduced-motion: reduce) {
         #resultModal[data-state="closed"] .modal-panel { transform: none; }
-        .spinner { animation-duration: 1.6s; }
     }
 </style>
 <div id="resultModal" data-state="closed" class="hidden fixed inset-0 bg-slate-900/50 items-center justify-center px-4 z-50">

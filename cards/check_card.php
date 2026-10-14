@@ -23,14 +23,17 @@ $iccode   = trim($_GET['iccode'] ?? '');
             <label for="iccode" class="block text-sm font-semibold text-slate-700 mb-1">Card Number</label>
             <input required type="text" id="iccode" name="iccode" maxlength="20" value="<?= htmlspecialchars($iccode) ?>" placeholder="e.g. A-R-NG-370" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
         </div>
-        <button id="runCheck" type="submit" class="px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white shadow disabled:opacity-50">Check All Branches</button>
-        <span id="progress" class="text-xs text-slate-500 pb-3"></span>
+        <button id="runCheck" type="submit" class="px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
+        <span id="progress" class="text-xs text-slate-500 pb-3 tabular-nums"></span>
+        <div id="progressTrack" class="basis-full h-1 rounded-full bg-slate-100 overflow-hidden opacity-0 transition-opacity">
+            <div id="progressBar" class="progress-bar h-full bg-sky-600" style="transform: scaleX(0)"></div>
+        </div>
     </form>
 
     <div id="summary" class="hidden mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Found on</div><div class="text-2xl font-bold text-emerald-600" id="sumFound">0</div></div>
-        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Not found on</div><div class="text-2xl font-bold text-slate-700" id="sumMissing">0</div></div>
-        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Not connecting</div><div class="text-2xl font-bold text-red-600" id="sumDown">0</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Found on</div><div class="text-2xl font-bold tabular-nums text-emerald-600" id="sumFound">0</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Not found on</div><div class="text-2xl font-bold tabular-nums text-slate-700" id="sumMissing">0</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-slate-500">Not connecting</div><div class="text-2xl font-bold tabular-nums text-red-600" id="sumDown">0</div></div>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
@@ -48,7 +51,7 @@ $iccode   = trim($_GET['iccode'] ?? '');
             </thead>
             <tbody id="resultsBody" class="divide-y divide-slate-100">
                 <?php foreach ($branches as $bcode => $bname): ?>
-                    <tr data-bcode="<?= htmlspecialchars($bcode) ?>">
+                    <tr class="hover:bg-slate-50" data-bcode="<?= htmlspecialchars($bcode) ?>">
                         <td class="px-4 py-2.5 font-semibold text-slate-800 whitespace-nowrap"><?= htmlspecialchars($bcode . ' - ' . $bname) ?></td>
                         <td class="px-4 py-2.5 result-cell text-slate-400">&mdash;</td>
                         <td class="px-4 py-2.5 holder-cell"></td>
@@ -71,6 +74,10 @@ $iccode   = trim($_GET['iccode'] ?? '');
         const input = document.getElementById('iccode');
         const runBtn = document.getElementById('runCheck');
         const progressEl = document.getElementById('progress');
+        const progressTrack = document.getElementById('progressTrack');
+        const progressBar = document.getElementById('progressBar');
+        const SPINNER = '<span class="spinner" aria-hidden="true"></span>';
+        const EMPTY = { 'holder-cell': '', 'category-cell': '', 'status-cell': '', 'expiry-cell': '', 'holders-cell': '' };
         const totals = { found: 0, missing: 0, down: 0 };
 
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -88,7 +95,7 @@ $iccode   = trim($_GET['iccode'] ?? '');
 
         async function checkBranch(row, iccode) {
             const bcode = row.dataset.bcode;
-            setCells(row, { 'result-cell': '<span class="text-amber-500">Checking…</span>', 'holder-cell': '', 'category-cell': '', 'status-cell': '', 'expiry-cell': '', 'holders-cell': '' });
+            setCells(row, Object.assign({ 'result-cell': '<span class="text-amber-500">' + SPINNER + ' Checking…</span>' }, EMPTY));
 
             try {
                 const resp = await fetch('ajax_check_card.php?' + new URLSearchParams({ bcode: bcode, iccode: iccode }));
@@ -128,6 +135,10 @@ $iccode   = trim($_GET['iccode'] ?? '');
                 setCells(row, { 'result-cell': '<span class="text-red-600 font-semibold" title="' + esc(err.message) + '">Error</span>' });
             } finally {
                 updateSummary();
+                // Fade the branch's result in when it arrives.
+                row.classList.remove('row-in');
+                void row.offsetWidth;
+                row.classList.add('row-in');
             }
         }
 
@@ -138,11 +149,16 @@ $iccode   = trim($_GET['iccode'] ?? '');
 
             let idx = 0, done = 0;
             progressEl.textContent = `0 / ${rows.length}`;
+            progressTrack.classList.remove('opacity-0');
+            progressBar.style.transform = 'scaleX(0)';
+            // Clear the previous card's results so stale rows can't be mistaken for this one.
+            rows.forEach((row) => setCells(row, Object.assign({ 'result-cell': '<span class="text-slate-400">Waiting…</span>' }, EMPTY)));
 
             async function worker() {
                 while (idx < rows.length) {
                     await checkBranch(rows[idx++], iccode);
                     progressEl.textContent = `${++done} / ${rows.length}`;
+                    progressBar.style.transform = `scaleX(${done / rows.length})`;
                 }
             }
 

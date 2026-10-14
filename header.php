@@ -41,7 +41,46 @@ $pageTitle   = $pageTitle ?? (isset($TOOLS[$currentTool]) ? $TOOLS[$currentTool]
             transform: scale(0.98);
         }
 
+        /* Progress fills with transform only (no layout); constant progress uses linear. */
+        .progress-bar {
+            transform-origin: left;
+            transition: transform 200ms linear;
+        }
+
+        /* A fast spinner makes the wait feel shorter. */
+        .spinner {
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 9999px;
+            vertical-align: -0.1em;
+            animation: spin 600ms linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* A result row fades in when it arrives. */
+        .row-in {
+            animation: row-in 200ms var(--ease-out);
+        }
+
+        @keyframes row-in {
+            from {
+                opacity: 0.25;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
+            .spinner {
+                animation-duration: 1.6s;
+            }
+
             *, ::before, ::after {
                 transition-property: color, background-color, border-color, box-shadow, opacity !important;
                 scroll-behavior: auto !important;
