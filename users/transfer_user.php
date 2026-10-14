@@ -70,6 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Refill the form after a rejected submit so nothing has to be picked again (except the password).
+$old = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
+function chosen($key, $value)
+{
+    global $old;
+    return (string)($old[$key] ?? '') === (string)$value ? 'selected' : '';
+}
+
 include __DIR__ . '/header.php';
 
 $branches = get_branches_list($conn, $connections);
@@ -92,7 +100,7 @@ $branches = get_branches_list($conn, $connections);
         </div>
     <?php endif; ?>
 
-    <form action="transfer_user.php" method="POST" class="space-y-6">
+    <form id="transferForm" action="transfer_user.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs flex items-center justify-center font-bold">1</span>
@@ -104,7 +112,7 @@ $branches = get_branches_list($conn, $connections);
                 <select required class="source_branch_select w-full" name="source_bcode">
                     <option value="">Select source branch</option>
                     <?php foreach ($branches as $bcode => $bname): ?>
-                        <option value="<?= htmlspecialchars($bcode) ?>" <?= $bcode == '01' ? 'selected' : '' ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
+                        <option value="<?= htmlspecialchars($bcode) ?>" <?= ($old ? chosen('source_bcode', $bcode) : ($bcode == '01' ? 'selected' : '')) ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <!-- <p class="text-xs text-slate-500 mt-1.5">The employee currently belongs to this branch — their record here will be set to inactive after a successful transfer.</p> -->
@@ -119,9 +127,10 @@ $branches = get_branches_list($conn, $connections);
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Employee<span class="text-red-500">*</span></label>
-                <select required disabled class="user_select w-full" name="ecode">
+                <select required disabled class="user_select w-full" name="ecode" data-old="<?= htmlspecialchars((string)($old['ecode'] ?? '')) ?>">
                     <option value="">Select a source branch first...</option>
                 </select>
+                <p id="employeeHint" class="text-xs text-slate-500 mt-1.5 tabular-nums"></p>
             </div>
         </div>
 
@@ -136,7 +145,7 @@ $branches = get_branches_list($conn, $connections);
                 <select required class="target_branch_select w-full" name="target_bcode">
                     <option value="">Select target branch...</option>
                     <?php foreach ($branches as $bcode => $bname): ?>
-                        <option value="<?= htmlspecialchars($bcode) ?>"><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
+                        <option value="<?= htmlspecialchars($bcode) ?>" <?= chosen('target_bcode', $bcode) ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -155,14 +164,15 @@ $branches = get_branches_list($conn, $connections);
         </div>
 
         <div class="flex items-center justify-end gap-4 pt-4">
-            <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-500 transition flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button id="transferButton" type="submit" class="px-8 py-3 rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="transferSpinner" class="spinner hidden" aria-hidden="true"></span>
+                <svg id="transferIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                Transfer Employee
+                <span id="transferLabel">Transfer Employee</span>
             </button>
         </div>
     </form>
@@ -182,65 +192,93 @@ $branches = get_branches_list($conn, $connections);
         });
 
         var $employee = $('.user_select');
+        var $hint = $('#employeeHint');
+        var SPINNER = '<span class="spinner" aria-hidden="true"></span>';
+        var loadToken = 0; // the newest source wins; late answers for an older pick are ignored
+        var restoreEcode = $employee.data('old') || ''; // reselect after a rejected submit, once
 
-        function loadEmployeesForSource(bcode, silent) {
+        function loadEmployeesForSource(bcode) {
+            var token = ++loadToken;
             $employee.prop('disabled', true).empty()
-                .append(new Option('Loading employees...', '', true, true))
+                .append(new Option(bcode ? 'Loading employees...' : 'Select a source branch first...', '', true, true))
                 .trigger('change');
 
             if (!bcode) {
-                $employee.empty().append(new Option('Select a source branch first...', '', true, true)).trigger('change');
+                $hint.text('');
                 return;
             }
+            $hint.html(SPINNER + ' Loading employees from branch ' + $('<span>').text(bcode).html() + '…');
 
-            $.getJSON('ajax_employees.php', {
-                bcode: bcode
-            }, function(data) {
-                $employee.empty().append(new Option('Search or select employee...', '', true, true));
-                data.forEach(function(emp) {
-                    $employee.append(new Option(emp.ename, emp.ecode, false, false));
+            $.getJSON('ajax_employees.php', { bcode: bcode })
+                .done(function(data) {
+                    if (token !== loadToken) return;
+                    // Build every option at once, labelled with the ECODE so namesakes can be told apart.
+                    var frag = document.createDocumentFragment();
+                    frag.appendChild(new Option('Search or select employee...', '', true, true));
+                    data.forEach(function(emp) {
+                        frag.appendChild(new Option(emp.ename + ' (' + emp.ecode + ')', emp.ecode, false, false));
+                    });
+                    $employee.empty()[0].appendChild(frag);
+                    if (restoreEcode && $employee.find('option[value="' + $.escapeSelector(restoreEcode) + '"]').length) {
+                        $employee.val(restoreEcode);
+                    }
+                    restoreEcode = '';
+                    $employee.prop('disabled', false).trigger('change');
+                    $hint.text(data.length.toLocaleString('en-US') + ' employee' + (data.length === 1 ? '' : 's') + ' on branch ' + bcode + '.');
+                })
+                .fail(function() {
+                    if (token !== loadToken) return;
+                    $employee.empty().append(new Option('Could not load employees', '', true, true)).trigger('change');
+                    $hint.empty()
+                        .append($('<span class="text-red-600">').text('Could not load employees from branch ' + bcode + '. '))
+                        .append('<button type="button" id="retryEmployees" class="font-semibold text-teal-700 hover:text-teal-600 underline underline-offset-2">Retry</button>');
+                    iziToast.error({ title: 'Load failed', message: 'Could not load employees from the selected branch', position: 'topRight' });
                 });
-                $employee.prop('disabled', false).trigger('change');
-
-                if (!silent && window.iziToast) {
-                    iziToast.info({
-                        title: 'Employees loaded',
-                        message: data.length + ' employee(s) found on this branch',
-                        position: 'topRight',
-                        timeout: 2500
-                    });
-                }
-            }).fail(function() {
-                $employee.empty().append(new Option('Could not load employees', '', true, true)).prop('disabled', false).trigger('change');
-                if (window.iziToast) {
-                    iziToast.error({
-                        title: 'Load failed',
-                        message: 'Could not load employees from the selected branch',
-                        position: 'topRight'
-                    });
-                }
-            });
         }
+        $hint.on('click', '#retryEmployees', function() { loadEmployeesForSource($('.source_branch_select').val()); });
 
-        $('.source_branch_select').on('change', function() {
-            loadEmployeesForSource($(this).val(), false);
-        });
-
-        // Auto-load employees for the pre-selected default source branch.
-        loadEmployeesForSource($('.source_branch_select').val(), true);
-
-        // Keep target branch from matching the chosen source branch.
-        $('.source_branch_select').on('change', function() {
-            var sourceVal = $(this).val();
+        // The target can never be the source branch — including the branch selected when the page opens.
+        function lockTargetToSource() {
+            var sourceVal = $('.source_branch_select').val();
             var $target = $('.target_branch_select');
             $target.find('option').prop('disabled', false);
             if (sourceVal && sourceVal !== 'MAIN') {
                 $target.find('option[value="' + sourceVal + '"]').prop('disabled', true);
                 if ($target.val() === sourceVal) {
-                    $target.val('').trigger('change');
+                    $target.val('');
                 }
             }
+            $target.trigger('change');
+        }
+
+        $('.source_branch_select').on('change', function() {
+            loadEmployeesForSource($(this).val());
+            lockTargetToSource();
         });
+
+        loadEmployeesForSource($('.source_branch_select').val());
+        lockTargetToSource();
+
+        // Enter in a field must not submit: a transfer also deactivates the employee on the source branch.
+        var form = document.getElementById('transferForm');
+        form.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.matches('input:not([type="checkbox"]):not([type="submit"])')) e.preventDefault();
+        });
+
+        // The transfer runs on the server before the results page loads: show it is working and block a second submit.
+        var transferButton = document.getElementById('transferButton');
+        function setTransferring(on) {
+            transferButton.disabled = on;
+            document.getElementById('transferSpinner').classList.toggle('hidden', !on);
+            document.getElementById('transferIcon').classList.toggle('hidden', on);
+            document.getElementById('transferLabel').textContent = on ? 'Transferring…' : 'Transfer Employee';
+        }
+        form.addEventListener('submit', function(e) {
+            if (transferButton.disabled) return e.preventDefault();
+            setTransferring(true);
+        });
+        // Coming back with the browser's Back button can restore the page mid-"Transferring…".
+        window.addEventListener('pageshow', function() { setTransferring(false); });
     });
 </script>
 </body>
