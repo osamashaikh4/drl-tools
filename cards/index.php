@@ -48,7 +48,7 @@ $actions = [
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <?php foreach ($actions as $a): $c = $a['color']; ?>
-            <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="<?= $a['link'] ?>" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-<?= $c ?>-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -63,14 +63,14 @@ $actions = [
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span class="text-xs font-medium text-slate-400"><?= $a['note'] ?></span>
-                    <a href="<?= $a['link'] ?>" class="inline-flex items-center gap-2 font-semibold text-sm text-<?= $c ?>-600 group-hover:text-<?= $c ?>-700 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-<?= $c ?>-600 group-hover:text-<?= $c ?>-700 group-hover:translate-x-1 transition-all">
                         <?= $a['cta'] ?>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </a>
+                    </span>
                 </div>
-            </div>
+            </a>
         <?php endforeach; ?>
     </div>
 </div>

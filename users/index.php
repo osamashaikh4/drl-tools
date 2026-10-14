@@ -37,7 +37,7 @@ $branches = get_branches_list($conn, $connections);
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
             <!-- Option 1: Add New User Card -->
-            <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="add_user.php" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -55,17 +55,17 @@ $branches = get_branches_list($conn, $connections);
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span class="text-xs font-medium text-slate-400">Complete EMP Schema Form</span>
-                    <a href="add_user.php" class="inline-flex items-center gap-2 font-semibold text-sm text-blue-600 group-hover:text-blue-700 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-blue-600 group-hover:text-blue-700 group-hover:translate-x-1 transition-all">
                         Create User
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </a>
+                    </span>
                 </div>
-            </div>
+            </a>
 
             <!-- Option 2: Copy Existing User Card -->
-            <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="copy_user.php" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -83,17 +83,17 @@ $branches = get_branches_list($conn, $connections);
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span class="text-xs font-medium text-slate-400">Multi-Table Replication</span>
-                    <a href="copy_user.php" class="inline-flex items-center gap-2 font-semibold text-sm text-indigo-600 group-hover:text-indigo-700 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-indigo-600 group-hover:text-indigo-700 group-hover:translate-x-1 transition-all">
                         Copy User
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </a>
+                    </span>
                 </div>
-            </div>
+            </a>
 
             <!-- Option 3: Transfer Employee Card -->
-            <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="transfer_user.php" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -108,17 +108,17 @@ $branches = get_branches_list($conn, $connections);
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span class="text-xs font-medium text-slate-400">Copy & Deactivate Source</span>
-                    <a href="transfer_user.php" class="inline-flex items-center gap-2 font-semibold text-sm text-teal-600 group-hover:text-teal-700 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-teal-600 group-hover:text-teal-700 group-hover:translate-x-1 transition-all">
                         Transfer
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </a>
+                    </span>
                 </div>
-            </div>
+            </a>
 
             <!-- Option 3: Manage User Account Card -->
-            <div class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="manage_user.php" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -133,14 +133,14 @@ $branches = get_branches_list($conn, $connections);
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span class="text-xs font-medium text-slate-400">Reset Password / Unlock</span>
-                    <a href="manage_user.php" class="inline-flex items-center gap-2 font-semibold text-sm text-purple-600 group-hover:text-purple-700 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-purple-600 group-hover:text-purple-700 group-hover:translate-x-1 transition-all">
                         Manage
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </a>
+                    </span>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
