@@ -15,7 +15,8 @@ drl-tools/
 ├── assets/            tailwind, jquery, select2, iziToast
 ├── commands/          run INSERT/UPDATE on branches
 ├── data-deficit/      branch vs 253 deficit check & fill (logs go to data-deficit/logs/)
-└── users/             add/copy/transfer/manage users (+ its own conn.php for 254 and system account)
+├── users/             add/copy/transfer/manage users (+ its own conn.php for 254 and system account)
+└── cards/             new card / copy cards (ICARDS + IC_HOLDERS) between branches
 ```
 
 ## Adding a new tool
