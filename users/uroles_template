@@ -1,0 +1,6 @@
+HSP DEPARTMENT = UROLE = RCP and for incharge two rows HSPI and RCPI
+PCR DEPARTMENT = UROLE = MOPS
+CHEM DEPARTMENT = UROLE = LAB and for incharge = LABI
+MICRO DEPARTMENT = UROLE = MCBS and LAB and for incharge MCBI 
+BLOOD BANK DEPARTMENT = UROLE = BLB and for incharge BLBI
+RECEPTION  = UROLE  = RCP and for incharge RCPI and RCPMP

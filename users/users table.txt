@@ -1,0 +1,82 @@
+Tables
+
+1.EMP
+2.BRANCH PRIV
+3.FSTARTUP
+4.UPRIV
+5.UROLES
+
+
+
+RIGHTS FOR LAB USERS (UPRIV)
+PCCODE  BCODE   ECODE UPVALUE UPSTATUS
+TUVP	50	Amber		Y						
+TVP	50	Amber		Y						
+WSDP	50	Amber	CLP	Y						
+WSDP	50	Amber	SPCII	Y						
+DP	50	Amber	SPCII	Y						
+DP	50	Amber	CLP	Y						
+RCTLP	50	Amber	MCB	Y						
+RCTLP	50	Amber	CLP	Y						
+RP	50	Amber		Y						
+RPP	50	Amber		Y						
+RPRP	50	Amber		Y						
+TAP	50	Amber	MCB	Y						
+UVDP	50	Amber	MCB	Y						
+UVDP	50	Amber	CLP	Y						
+WBP	50	Amber		Y						
+WSDP	50	Amber	MCB	Y						
+DP	50	Amber	MCB	Y						
+LTPP	50	Amber		Y						
+
+RIGHTS FOR Reception USERS (UPRIV)
+PCCODE  BCODE   ECODE UPVALUE UPSTATUS
+MPP	01	Rida		N						
+PRP	01	Rida		Y						
+RP	01	Rida		Y						
+PP	01	Rida		Y						
+OBP	01	Rida		Y						
+CRP	01	Rida		N						
+RPRP	01	Rida		Y						
+TRCP	01	Rida		Y
+P_RW    01	Rida		Y   (modification right for Incharge only)
+
+
+UROLES for Lab user 
+BCODE ECODE RMCODE URSTATUS
+50	Amber	LAB	Y	
+50	Amber	LABI	Y	(for Incharge only)	
+
+
+UROLES for Reception user 
+BCODE ECODE RMCODE URSTATUS
+50	Amber	RCP	Y
+50	Amber	RCPI	Y  (for Incharge only)
+
+
+
+sql commands
+
+for reception users
+
+grant connect,ddict,labtest_r,labtest_w,reporting,reception,patient_rw to MansoorBaloch identified by drl123;
+
+patient_rw (only for incharge)
+
+
+for lab users
+
+GRANT connect, ddict, labtest_r, labtest_w, reporting TO Bashir  IDENTIFIED BY drl;
+
+
+sql command for pass change
+
+alter user Amber identified by xyz;
+
+
+sql command for account unlock
+
+alter user Amber account unlock;
+
+
+							

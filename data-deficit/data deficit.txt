@@ -1,0 +1,56 @@
+Select count(*) from p_investigations  where PIED BETWEEN '01-MAR-26' AND '31-MAR-26' and bcode ='20';
+Select COUNT(*) from pbilling  where PBED BETWEEN '01-MAR-26' AND '31-MAR-26' and bcode ='20';
+SELECT COUNT(*) FROM PBCANCEL WHERE PBCED BETWEEN '01-MAR-26' AND '31-MAR-26' and bcode ='20';
+
+
+
+
+Select * from LOGINBATCH@d20  where LIBSDATE BETWEEN '01-MAR-26' AND '31-MAR-26' and libcode like'20%'
+MINUS
+Select * from LOGINBATCH  where LIBSDATE BETWEEN '01-MAR-26' AND '31-MAR-26'  and libcode like'20%';
+
+Select * from LOGOUTBATCH@d20  where LOBDATE BETWEEN '01-MAR-26' AND '31-MAR-26' and libcode like '20%'
+minus
+Select * from LOGOUTBATCH  where LOBDATE BETWEEN '01-MAR-26' AND '31-MAR-26' and libcode like '20%';
+
+select  *
+from patient_bio@d20 WHERE EMR IN (select EMR from patient_visits@D20 where PvED between '01-MAR-26' AND '31-MAR-26' AND BCODE='20'
+minus
+select EMR from patient_visits where PvED between '01-MAR-26' AND '31-MAR-26' AND BCODE='20');
+
+select * from patient_visits@d20 where PvED between '01-MAR-26' AND '31-MAR-26' and bcode='20'
+minus
+select * from patient_visits where PvED between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from p_investigations@d20 where PIED between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from p_investigations where PIED between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from pbilling@d20 where PbED between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from pbilling where PbED between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from PIVERIFIED@d20 where Pived between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from piverified where Pived between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from PIPARAMV1@d20 where Piped between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from PIPARAMV1 where Piped between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from PIPARAMVDTL@d20 where PipDed between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from PIPARAMVDTL where PipDed between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+select * from APPREQUEST@d20 where APPRED between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from APPREQUEST where APPRED between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
+SELECT * FROM APPRCRESPONSE@d20 WHERE APPREQID IN (select APPREQID from APPREQUEST where APPRED between '01-MAR-26' AND '31-MAR-26' and bcode ='20'
+minus
+select APPREQID from APPREQUEST where APPRED between '01-MAR-26' AND '31-MAR-26' and bcode='20');
+
+select * from PBCANCEL@d20 where PBCED between '01-MAR-26' AND '31-MAR-26' and bcode = '20'
+minus
+select * from PBCANCEL where PBCED between '01-MAR-26' AND '31-MAR-26' and bcode='20';
+
