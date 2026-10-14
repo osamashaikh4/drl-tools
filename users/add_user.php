@@ -283,7 +283,7 @@ $designations = get_designations_list($conn);
             <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all">
+            <button type="submit" class="px-8 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition">
                 Create User
             </button>
         </div>

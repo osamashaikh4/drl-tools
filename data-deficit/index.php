@@ -60,8 +60,19 @@ $branchNames = loadBranchNames($conn);
     </div>
 </div>
 
-<div id="resultModal" class="hidden fixed inset-0 bg-slate-900/50 items-center justify-center px-4 z-50">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-5xl w-full p-6">
+<style>
+    /* Fade the backdrop, scale the panel up from 0.95 (centered: modals have no trigger origin). Exit is faster than enter. */
+    #resultModal { transition: opacity 200ms var(--ease-out); }
+    #resultModal .modal-panel { transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out); }
+    #resultModal[data-state="closed"] { opacity: 0; transition-duration: 150ms; }
+    #resultModal[data-state="closed"] .modal-panel { opacity: 0; transform: scale(0.95); transition-duration: 150ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+        #resultModal[data-state="closed"] .modal-panel { transform: none; }
+    }
+</style>
+<div id="resultModal" data-state="closed" class="hidden fixed inset-0 bg-slate-900/50 items-center justify-center px-4 z-50">
+    <div class="modal-panel bg-white rounded-2xl shadow-xl border border-slate-200 max-w-5xl w-full p-6">
         <div class="flex items-start justify-between mb-3 gap-4">
             <h3 id="modalTitle" class="text-base font-bold text-slate-900"></h3>
             <button id="modalClose" type="button" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>

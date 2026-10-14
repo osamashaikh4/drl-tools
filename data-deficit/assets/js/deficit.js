@@ -12,22 +12,39 @@
         modalTitle.textContent = title;
         modalTitle.className = variant === 'error' ? 'text-base font-bold text-red-600' : 'text-base font-bold text-slate-900';
         modalBody.textContent = message;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        clearTimeout(hideTimer);
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            modal.offsetHeight; // apply the closed state before animating to open
+        }
+        modal.dataset.state = 'open';
     }
 
-    function hideModal() {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+    let hideTimer;
+
+    // Keyboard-initiated closes (Escape) are instant; clicks get the short exit animation.
+    function hideModal(animate = true) {
+        modal.dataset.state = 'closed';
+        clearTimeout(hideTimer);
+        const finish = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+        if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            hideTimer = setTimeout(finish, 150);
+        } else {
+            finish();
+        }
     }
 
-    document.getElementById('modalClose').addEventListener('click', hideModal);
-    document.getElementById('modalOk').addEventListener('click', hideModal);
+    document.getElementById('modalClose').addEventListener('click', () => hideModal());
+    document.getElementById('modalOk').addEventListener('click', () => hideModal());
     modal.addEventListener('click', (e) => {
         if (e.target === modal) hideModal();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal();
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal(false);
     });
 
     function fmtCount(local, branch, deficit) {

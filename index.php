@@ -20,7 +20,7 @@ include __DIR__ . '/header.php';
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         <?php foreach ($TOOLS as $slug => $tool): $c = $tool['color']; ?>
-            <a href="<?= htmlspecialchars($tool['folder']) ?>/index.php" class="group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            <a href="<?= htmlspecialchars($tool['folder']) ?>/index.php" class="press group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition duration-200 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-<?= $c ?>-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">
@@ -34,7 +34,7 @@ include __DIR__ . '/header.php';
                 </div>
 
                 <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-end">
-                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-<?= $c ?>-600 group-hover:translate-x-1 transition-all">
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-<?= $c ?>-600 group-hover:translate-x-1 transition">
                         Open
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />

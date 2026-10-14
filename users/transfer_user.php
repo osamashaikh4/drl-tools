@@ -158,7 +158,7 @@ $branches = get_branches_list($conn, $connections);
             <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-500 transition-all flex items-center gap-2">
+            <button type="submit" class="px-8 py-3 rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-500 transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
                 </svg>

@@ -351,7 +351,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
                 <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition-all flex items-center gap-2">
+                <button type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>

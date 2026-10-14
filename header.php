@@ -15,6 +15,44 @@ $pageTitle   = $pageTitle ?? (isset($TOOLS[$currentTool]) ? $TOOLS[$currentTool]
     <link rel="stylesheet" href="<?= $base ?>assets/css/select2.min.css">
     <link rel="stylesheet" type="text/css" href="<?= $base ?>assets/css/iziToast.css" />
     <script src="<?= $base ?>assets/js/tailwind.js"></script>
+    <script>
+        // hover: utilities only apply on devices with a real hover pointer (no sticky hover on touch).
+        tailwind.config = { future: { hoverOnlyWhenSupported: true } };
+    </script>
+    <style>
+        :root {
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        /* Pressable things scale down slightly so a click feels acknowledged. */
+        button:not(:disabled),
+        .press {
+            transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+            transition-duration: 160ms;
+            transition-timing-function: var(--ease-out);
+        }
+
+        button:not(:disabled):active {
+            transform: scale(0.97);
+        }
+
+        .press:active {
+            transform: scale(0.98);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                transition-property: color, background-color, border-color, box-shadow, opacity !important;
+                scroll-behavior: auto !important;
+            }
+
+            button:not(:disabled):active,
+            .press:active {
+                transform: none;
+            }
+        }
+    </style>
     <script src="<?= $base ?>assets/js/jquery.js"></script>
     <script src="<?= $base ?>assets/js/select2.min.js"></script>
     <script src="<?= $base ?>assets/js/iziToast.js"></script>

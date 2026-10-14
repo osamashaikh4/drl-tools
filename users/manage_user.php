@@ -114,13 +114,13 @@ $branches  = get_branches_list($conn, $connections);
             <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
-            <button type="submit" name="do_unlock" value="1" class="px-8 py-3 rounded-xl bg-amber-500 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all flex items-center gap-2">
+            <button type="submit" name="do_unlock" value="1" class="px-8 py-3 rounded-xl bg-amber-500 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
                 Unlock Account
             </button>
-            <button type="submit" name="do_reset" value="1" class="px-8 py-3 rounded-xl bg-purple-600 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 hover:bg-purple-500 transition-all flex items-center gap-2">
+            <button type="submit" name="do_reset" value="1" class="px-8 py-3 rounded-xl bg-purple-600 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 hover:bg-purple-500 transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
