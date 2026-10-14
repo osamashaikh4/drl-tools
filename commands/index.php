@@ -63,6 +63,12 @@ include __DIR__ . "/header.php";
     }
 
     /* Result cells select like a spreadsheet: active cell outlined, the rest of the range tinted. */
+    /* Column dividers in every result table. */
+    #results th,
+    #results td {
+        border-right: 1px solid #e2e8f0;
+    }
+
     #results td {
         cursor: cell;
         scroll-margin-top: 2.5rem; /* keep the active cell clear of the sticky header */
@@ -70,12 +76,12 @@ include __DIR__ . "/header.php";
 
     /* Windows selection blue. */
     #results td.cell-in-range {
-        background: #0078d7;
+        background: #2b88d8;
         color: #fff;
     }
 
     #results td.cell-selected {
-        background: #005a9e;
+        background: #0078d7;
         color: #fff;
         box-shadow: inset 0 0 0 2px #99d1ff;
     }
