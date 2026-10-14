@@ -73,7 +73,7 @@ $branches = card_branches_list($conn, $connections);
         </div>
     <?php endif; ?>
 
-    <form action="copy_card.php" method="POST" class="space-y-6">
+    <form id="copyForm" action="copy_card.php" method="POST" class="space-y-6">
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
@@ -92,7 +92,7 @@ $branches = card_branches_list($conn, $connections);
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Card(s) <span class="text-red-500">*</span></label>
                     <select required disabled multiple="multiple" class="card_select w-full" name="iccode[]"></select>
-                    <p id="cardHint" class="text-xs text-slate-500 mt-1.5">Select a source branch to load its cards.</p>
+                    <p id="cardHint" class="text-xs text-slate-500 mt-1.5 tabular-nums">Select a source branch to load its cards.</p>
                 </div>
             </div>
         </div>
@@ -115,18 +115,19 @@ $branches = card_branches_list($conn, $connections);
 
         <div class="flex items-center justify-between gap-4 pt-4">
             <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="dry_run" value="1" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
+                <input type="checkbox" id="dryRun" name="dry_run" value="1" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
                 <span class="text-sm font-semibold text-slate-700">Dry run <span class="font-normal text-slate-500">(show the inserts, change nothing)</span></span>
             </label>
             <div class="flex items-center gap-4">
-                <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="copyButton" type="submit" class="px-8 py-3 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span id="copySpinner" class="spinner hidden" aria-hidden="true"></span>
+                    <svg id="copyIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy Card
+                    <span id="copyLabel">Copy Card</span>
                 </button>
             </div>
         </div>
@@ -143,6 +144,48 @@ $branches = card_branches_list($conn, $connections);
         $cards.select2({ placeholder: "Search cards by code or holder name" });
         $targets.select2({ placeholder: "Select target branches" });
 
+        const SPINNER = '<span class="spinner" aria-hidden="true"></span>';
+        const fmt = (n) => n.toLocaleString('en-US');
+        let loadToken = 0; // the newest source wins; late answers for an older pick are ignored
+        let loaded = null; // { bcode, count }
+
+        function updateHint() {
+            if (!loaded) return;
+            const picked = ($cards.val() || []).length;
+            $hint.text(fmt(loaded.count) + ' cards on branch ' + loaded.bcode + (picked ? ' · ' + fmt(picked) + ' selected' : '.'));
+        }
+
+        function loadCards(bcode) {
+            const token = ++loadToken;
+            loaded = null;
+            $cards.empty().prop('disabled', true).trigger('change');
+            if (!bcode) {
+                $hint.text('Select a source branch to load its cards.');
+                return;
+            }
+            $hint.html(SPINNER + ' Loading cards from branch ' + $('<span>').text(bcode).html() + '…');
+
+            $.getJSON('ajax_cards.php', { bcode: bcode })
+                .done(function(cards) {
+                    if (token !== loadToken) return;
+                    // Build every option at once; appending thousands one by one is slow.
+                    const frag = document.createDocumentFragment();
+                    cards.forEach(function(c) { frag.appendChild(new Option(c.text, c.id)); });
+                    $cards[0].appendChild(frag);
+                    $cards.prop('disabled', false).trigger('change');
+                    loaded = { bcode: bcode, count: cards.length };
+                    updateHint();
+                })
+                .fail(function(xhr) {
+                    if (token !== loadToken) return;
+                    const msg = (xhr.responseJSON && xhr.responseJSON.error) || 'Could not load cards.';
+                    $hint.empty()
+                        .append($('<span class="text-red-600">').text(msg + ' '))
+                        .append('<button type="button" id="retryCards" class="font-semibold text-indigo-600 hover:text-indigo-500 underline underline-offset-2">Retry</button>');
+                    iziToast.error({ title: 'Error', message: msg });
+                });
+        }
+
         $('.source_branch_select').on('change', function() {
             const bcode = $(this).val();
 
@@ -153,27 +196,25 @@ $branches = card_branches_list($conn, $connections);
             }
             $targets.trigger('change');
 
-            $cards.empty().prop('disabled', true).trigger('change');
-            if (!bcode) {
-                $hint.text('Select a source branch to load its cards.');
-                return;
-            }
-            $hint.text('Loading cards from branch ' + bcode + '…');
-
-            $.getJSON('ajax_cards.php', { bcode: bcode })
-                .done(function(cards) {
-                    cards.forEach(function(c) {
-                        $cards.append(new Option(c.text, c.id));
-                    });
-                    $cards.prop('disabled', false).trigger('change');
-                    $hint.text(cards.length + ' cards on branch ' + bcode + '.');
-                })
-                .fail(function(xhr) {
-                    const msg = (xhr.responseJSON && xhr.responseJSON.error) || 'Could not load cards.';
-                    $hint.text(msg);
-                    iziToast.error({ title: 'Error', message: msg });
-                });
+            loadCards(bcode);
         });
+        $hint.on('click', '#retryCards', function() { loadCards($('.source_branch_select').val()); });
+        $cards.on('change', updateHint);
+
+        // The copy runs on the server before the results page loads: show it is working and block a second submit.
+        const copyButton = document.getElementById('copyButton');
+        function setCopying(on) {
+            copyButton.disabled = on;
+            document.getElementById('copySpinner').classList.toggle('hidden', !on);
+            document.getElementById('copyIcon').classList.toggle('hidden', on);
+            document.getElementById('copyLabel').textContent = on ? (document.getElementById('dryRun').checked ? 'Checking…' : 'Copying…') : 'Copy Card';
+        }
+        document.getElementById('copyForm').addEventListener('submit', function(e) {
+            if (copyButton.disabled) return e.preventDefault();
+            setCopying(true);
+        });
+        // Coming back with the browser's Back button can restore the page mid-"Copying…".
+        window.addEventListener('pageshow', function() { setCopying(false); });
     });
 </script>
 </body>
