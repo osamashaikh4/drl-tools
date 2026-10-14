@@ -59,6 +59,16 @@ include __DIR__ . "/header.php";
         pointer-events: none;
     }
 
+    /* A clicked result cell; Ctrl+C copies its value. */
+    #results td {
+        cursor: cell;
+    }
+
+    #results td.cell-selected {
+        box-shadow: inset 0 0 0 2px #10b981;
+        background: #ecfdf5;
+    }
+
     .grid-table th,
     .grid-table td {
         white-space: nowrap;
@@ -69,8 +79,18 @@ include __DIR__ . "/header.php";
 </style>
 
 <div class="flex h-[calc(100vh-3.5rem)] bg-white">
+    <!-- Rail with the button that shows / hides the tables sidebar (collapsed by default). -->
+    <div class="w-12 shrink-0 flex flex-col items-center py-3 border-r border-slate-200">
+        <button id="sidebarToggle" type="button" aria-controls="tableSidebar" aria-expanded="false" title="Show tables" class="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" stroke-width="1.75" />
+                <path stroke-linecap="round" stroke-width="1.75" d="M9 4v16" />
+            </svg>
+        </button>
+    </div>
+
     <!-- Sidebar: tables and their columns; clicking a name inserts it into the editor. -->
-    <aside class="hidden md:flex w-72 shrink-0 flex-col border-r border-slate-200">
+    <aside id="tableSidebar" class="hidden w-56 shrink-0 flex-col border-r border-slate-200">
         <div class="px-5 h-14 flex items-center border-b border-slate-200">
             <h1 class="text-lg font-semibold text-slate-900">SQL Editor</h1>
         </div>
@@ -84,13 +104,20 @@ include __DIR__ . "/header.php";
         <div id="tableList" class="flex-1 overflow-y-auto pb-4 text-sm"></div>
     </aside>
 
-    <main class="flex-1 min-w-0 flex flex-col">
+    <main id="workArea" class="flex-1 min-w-0 flex flex-col">
         <div class="flex-1 min-h-0 relative">
             <textarea id="command" placeholder="Write a SELECT, INSERT or UPDATE…"></textarea>
         </div>
 
+        <!-- Drag to resize the results; double-click resets; arrow keys when focused. -->
+        <div id="resizeHandle" role="separator" aria-orientation="horizontal" aria-label="Resize results" tabindex="0" title="Drag to resize · double-click to reset"
+            class="group relative h-0 shrink-0 cursor-row-resize focus:outline-none">
+            <div class="absolute inset-x-0 -top-1.5 h-3 z-10"></div>
+            <div class="absolute inset-x-0 -top-px h-[3px] bg-transparent group-hover:bg-emerald-400 group-focus-visible:bg-emerald-500 transition-colors"></div>
+        </div>
+
         <!-- Results panel -->
-        <section class="h-[42%] min-h-[220px] border-t border-slate-200 flex flex-col">
+        <section id="resultsPane" style="height: 42%" class="shrink-0 border-t border-slate-200 flex flex-col">
             <div class="relative h-12 shrink-0 flex items-center justify-between gap-3 px-4 border-b border-slate-200">
                 <div class="flex items-center gap-3 min-w-0 self-stretch">
                     <span class="h-full flex items-center text-sm font-medium text-slate-900 border-b-2 border-slate-900">Results</span>
@@ -212,6 +239,28 @@ include __DIR__ . "/header.php";
         document.getElementById('tableSearch').addEventListener('input', (e) => renderTables(e.target.value));
         renderTables('');
 
+        // Collapsed unless the user opened it last time. No animation: it's toggled often.
+        const SIDEBAR_KEY = 'commands.sidebarOpen';
+        const sidebar = document.getElementById('tableSidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+
+        function setSidebar(open, focusSearch = true) {
+            sidebar.classList.toggle('hidden', !open);
+            sidebar.classList.toggle('flex', open);
+            sidebarToggle.setAttribute('aria-expanded', String(open));
+            sidebarToggle.title = open ? 'Hide tables' : 'Show tables';
+            sidebarToggle.classList.toggle('bg-slate-100', open);
+            sidebarToggle.classList.toggle('text-slate-900', open);
+            try { localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0'); } catch (e) {}
+            editor.refresh(); // the editor's width changed
+            if (open && focusSearch) document.getElementById('tableSearch').focus();
+        }
+
+        sidebarToggle.addEventListener('click', () => setSidebar(sidebar.classList.contains('hidden')));
+        let sidebarOpen = false;
+        try { sidebarOpen = localStorage.getItem(SIDEBAR_KEY) === '1'; } catch (e) {}
+        if (sidebarOpen) setSidebar(true, false);
+
         // ---------- Branch picker ----------
         const STORE_KEY = 'commands.branches';
         let selected = new Set();
@@ -285,7 +334,7 @@ include __DIR__ . "/header.php";
         }
 
         function cell(v) {
-            if (v === null) return '<td class="px-3 py-1.5 text-slate-400 italic">NULL</td>';
+            if (v === null) return '<td class="px-3 py-1.5 text-slate-400 italic" data-null>NULL</td>';
             return '<td class="px-3 py-1.5" title="' + esc(v) + '">' + esc(v) + '</td>';
         }
 
@@ -367,6 +416,7 @@ include __DIR__ . "/header.php";
             if (writes && !confirm('Run ' + writes + ' INSERT/UPDATE statement' + (writes === 1 ? '' : 's') + ' on ' + codes.length + ' branch' + (codes.length === 1 ? '' : 'es') + '?')) return;
 
             runButton.disabled = true;
+            selectCell(null);
             document.getElementById('runLabel').innerHTML = SPINNER + ' Running';
             buildSections(plan.statements);
             const totals = { down: 0, failed: 0 };
@@ -404,6 +454,110 @@ include __DIR__ . "/header.php";
         }
 
         runButton.addEventListener('click', run);
+
+        // ---------- Copy a single cell ----------
+        // Click a cell to select it; Ctrl+C then copies just its value. Uses the native copy event,
+        // which also works when the page is opened over plain http on the network (no Clipboard API there).
+        let selectedCell = null;
+        let copiedTimer;
+
+        function selectCell(td) {
+            if (selectedCell) selectedCell.classList.remove('cell-selected');
+            selectedCell = td;
+            if (td) td.classList.add('cell-selected');
+        }
+
+        results.addEventListener('click', (e) => {
+            const td = e.target.closest('td');
+            if (td && results.contains(td)) selectCell(td === selectedCell ? null : td);
+        });
+        document.addEventListener('click', (e) => {
+            if (selectedCell && !e.target.closest('#results')) selectCell(null);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && selectedCell) selectCell(null);
+        });
+
+        document.addEventListener('copy', (e) => {
+            if (!selectedCell || !document.body.contains(selectedCell)) return;
+            // Leave normal copying alone: highlighted text, or typing in the editor / an input.
+            const active = document.activeElement;
+            if (!window.getSelection().isCollapsed || active.closest('input, textarea, .CodeMirror')) return;
+
+            const value = selectedCell.hasAttribute('data-null') ? '' : selectedCell.textContent.trim();
+            e.clipboardData.setData('text/plain', value);
+            e.preventDefault();
+
+            // Keyboard action: instant feedback, no animation.
+            const before = summary.dataset.text ?? summary.textContent;
+            summary.dataset.text = before;
+            summary.innerHTML = '<span class="text-emerald-700 font-medium">Copied</span>';
+            clearTimeout(copiedTimer);
+            copiedTimer = setTimeout(() => {
+                summary.textContent = summary.dataset.text;
+                delete summary.dataset.text;
+            }, 1200);
+        });
+
+        // ---------- Resizable results pane ----------
+        const RESULTS_KEY = 'commands.resultsHeight';
+        const MIN_RESULTS = 240; // px
+        const MIN_EDITOR = 120; // px
+        const workArea = document.getElementById('workArea');
+        const resultsPane = document.getElementById('resultsPane');
+        const handle = document.getElementById('resizeHandle');
+
+        function setResultsHeight(px, save = true) {
+            const max = workArea.clientHeight - MIN_EDITOR;
+            // If the window is too short for both, the results minimum wins.
+            const h = Math.round(Math.max(MIN_RESULTS, Math.min(px, max)));
+            resultsPane.style.height = h + 'px';
+            handle.setAttribute('aria-valuenow', String(h));
+            if (save) {
+                try { localStorage.setItem(RESULTS_KEY, String(h)); } catch (e) {}
+            }
+            editor.refresh();
+        }
+
+        // Pointer capture keeps the drag going even when the pointer leaves the thin handle.
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            handle.setPointerCapture(e.pointerId);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+        handle.addEventListener('pointermove', (e) => {
+            if (!handle.hasPointerCapture(e.pointerId)) return;
+            setResultsHeight(workArea.getBoundingClientRect().bottom - e.clientY, false);
+        });
+        const endDrag = (e) => {
+            if (!handle.hasPointerCapture(e.pointerId)) return;
+            handle.releasePointerCapture(e.pointerId);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setResultsHeight(resultsPane.getBoundingClientRect().height);
+        };
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
+
+        handle.addEventListener('dblclick', () => {
+            try { localStorage.removeItem(RESULTS_KEY); } catch (e) {}
+            setResultsHeight(workArea.clientHeight * 0.42, false);
+        });
+        handle.addEventListener('keydown', (e) => {
+            const step = e.shiftKey ? 96 : 24;
+            if (e.key === 'ArrowUp') setResultsHeight(resultsPane.offsetHeight + step);
+            else if (e.key === 'ArrowDown') setResultsHeight(resultsPane.offsetHeight - step);
+            else return;
+            e.preventDefault();
+        });
+
+        // Restore the saved size, and keep it within bounds when the window changes size.
+        let savedHeight = null;
+        try { savedHeight = parseInt(localStorage.getItem(RESULTS_KEY), 10) || null; } catch (e) {}
+        setResultsHeight(savedHeight || workArea.clientHeight * 0.42, false);
+        window.addEventListener('resize', () => setResultsHeight(resultsPane.offsetHeight, false));
     })();
 </script>
 <?php include __DIR__ . "/../footer.php"; ?>
