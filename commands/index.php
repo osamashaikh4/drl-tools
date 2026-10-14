@@ -69,12 +69,12 @@ include __DIR__ . "/header.php";
     }
 
     #results td.cell-in-range {
-        background: #1e293b;
+        background: #334155;
         color: #f8fafc;
     }
 
     #results td.cell-selected {
-        background: #0f172a;
+        background: #1e293b;
         color: #fff;
         box-shadow: inset 0 0 0 2px #94a3b8;
     }
