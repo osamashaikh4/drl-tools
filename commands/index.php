@@ -59,9 +59,14 @@ include __DIR__ . "/header.php";
         pointer-events: none;
     }
 
-    /* A clicked result cell; Ctrl+C copies its value. */
+    /* Result cells select like a spreadsheet: active cell outlined, the rest of the range tinted. */
     #results td {
         cursor: cell;
+        scroll-margin-top: 2.5rem; /* keep the active cell clear of the sticky header */
+    }
+
+    #results td.cell-in-range {
+        background: #ecfdf5;
     }
 
     #results td.cell-selected {
@@ -455,37 +460,118 @@ include __DIR__ . "/header.php";
 
         runButton.addEventListener('click', run);
 
-        // ---------- Copy a single cell ----------
-        // Click a cell to select it; Ctrl+C then copies just its value. Uses the native copy event,
-        // which also works when the page is opened over plain http on the network (no Clipboard API there).
-        let selectedCell = null;
+        // ---------- Cell selection, keyboard navigation and copy (like SQL Developer) ----------
+        // Click a cell, move with the arrow keys, extend a block with Shift+Arrow or Shift+click, Ctrl+A for the
+        // whole table. Ctrl+C copies the block tab-separated (Ctrl+Shift+C adds the column headers). Copying uses
+        // the native copy event, so it also works when the page is opened over plain http (no Clipboard API there).
+        let sel = null; // { tbody, anchor: [row, col], active: [row, col] }
+        let painted = [];
+        let copyWithHeaders = false;
         let copiedTimer;
 
-        function selectCell(td) {
-            if (selectedCell) selectedCell.classList.remove('cell-selected');
-            selectedCell = td;
-            if (td) td.classList.add('cell-selected');
+        const cellAt = (tbody, r, c) => (tbody.rows[r] ? tbody.rows[r].cells[c] : null);
+        const posOf = (td) => [td.parentElement.sectionRowIndex, td.cellIndex];
+
+        function paint() {
+            painted.forEach((td) => td.classList.remove('cell-selected', 'cell-in-range'));
+            painted = [];
+            if (!sel) return;
+            const [r1, r2] = [Math.min(sel.anchor[0], sel.active[0]), Math.max(sel.anchor[0], sel.active[0])];
+            const [c1, c2] = [Math.min(sel.anchor[1], sel.active[1]), Math.max(sel.anchor[1], sel.active[1])];
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) {
+                    const td = cellAt(sel.tbody, r, c);
+                    if (td) { td.classList.add('cell-in-range'); painted.push(td); }
+                }
+            }
+            const active = cellAt(sel.tbody, sel.active[0], sel.active[1]);
+            if (active) {
+                active.classList.add('cell-selected');
+                painted.push(active);
+                active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
         }
 
+        function selectCell(td, extend = false) {
+            if (!td) { sel = null; return paint(); }
+            const tbody = td.closest('tbody');
+            if (extend && sel && sel.tbody === tbody) {
+                sel.active = posOf(td);
+            } else {
+                sel = { tbody: tbody, anchor: posOf(td), active: posOf(td) };
+            }
+            paint();
+        }
+
+        // Shift+click would otherwise start a text selection instead of extending the block.
+        results.addEventListener('mousedown', (e) => {
+            if (e.shiftKey && e.target.closest('td') && sel) e.preventDefault();
+        });
         results.addEventListener('click', (e) => {
             const td = e.target.closest('td');
-            if (td && results.contains(td)) selectCell(td === selectedCell ? null : td);
+            if (td && results.contains(td) && td.closest('tbody')) selectCell(td, e.shiftKey);
         });
         document.addEventListener('click', (e) => {
-            if (selectedCell && !e.target.closest('#results')) selectCell(null);
+            if (sel && !e.target.closest('#results')) selectCell(null);
         });
+
+        const typingSomewhere = () => !!document.activeElement.closest('input, textarea, .CodeMirror');
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && selectedCell) selectCell(null);
+            if (!sel || !document.body.contains(sel.tbody) || typingSomewhere()) return;
+
+            if (e.key === 'Escape') return selectCell(null);
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+                copyWithHeaders = e.shiftKey;
+                if (e.shiftKey) { e.preventDefault(); document.execCommand('copy'); } // Ctrl+Shift+C has no native copy
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+                const rows = sel.tbody.rows.length, cols = sel.tbody.rows[0].cells.length;
+                sel.anchor = [0, 0];
+                sel.active = [rows - 1, cols - 1];
+                e.preventDefault();
+                return paint();
+            }
+
+            const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+            if (!moves[e.key]) return;
+            e.preventDefault();
+            const [dr, dc] = moves[e.key];
+            const rows = sel.tbody.rows.length;
+            const cols = sel.tbody.rows[sel.active[0]].cells.length;
+            // Ctrl+Arrow jumps to the edge, like a spreadsheet.
+            const r = e.ctrlKey ? (dr < 0 ? 0 : dr > 0 ? rows - 1 : sel.active[0]) : Math.max(0, Math.min(rows - 1, sel.active[0] + dr));
+            const c = e.ctrlKey ? (dc < 0 ? 0 : dc > 0 ? cols - 1 : sel.active[1]) : Math.max(0, Math.min(cols - 1, sel.active[1] + dc));
+            sel.active = [r, c];
+            if (!e.shiftKey) sel.anchor = [r, c];
+            paint();
         });
 
         document.addEventListener('copy', (e) => {
-            if (!selectedCell || !document.body.contains(selectedCell)) return;
+            if (!sel || !document.body.contains(sel.tbody)) return;
             // Leave normal copying alone: highlighted text, or typing in the editor / an input.
-            const active = document.activeElement;
-            if (!window.getSelection().isCollapsed || active.closest('input, textarea, .CodeMirror')) return;
+            if (!window.getSelection().isCollapsed || typingSomewhere()) return;
 
-            const value = selectedCell.hasAttribute('data-null') ? '' : selectedCell.textContent.trim();
-            e.clipboardData.setData('text/plain', value);
+            const [r1, r2] = [Math.min(sel.anchor[0], sel.active[0]), Math.max(sel.anchor[0], sel.active[0])];
+            const [c1, c2] = [Math.min(sel.anchor[1], sel.active[1]), Math.max(sel.anchor[1], sel.active[1])];
+            const single = r1 === r2 && c1 === c2 && !copyWithHeaders;
+            const text = (td) => {
+                if (!td || td.hasAttribute('data-null')) return '';
+                const v = td.textContent.trim();
+                return single ? v : v.replace(/[\t\r\n]+/g, ' '); // keep the tab-separated grid intact
+            };
+            const lines = [];
+            if (copyWithHeaders) {
+                const ths = sel.tbody.closest('table').tHead.rows[0].cells;
+                lines.push(Array.from({ length: c2 - c1 + 1 }, (_, i) => text(ths[c1 + i])).join('\t'));
+            }
+            for (let r = r1; r <= r2; r++) {
+                lines.push(Array.from({ length: c2 - c1 + 1 }, (_, i) => text(cellAt(sel.tbody, r, c1 + i))).join('\t'));
+            }
+            copyWithHeaders = false;
+
+            e.clipboardData.setData('text/plain', lines.join('\n'));
             e.preventDefault();
 
             // Keyboard action: instant feedback, no animation.
