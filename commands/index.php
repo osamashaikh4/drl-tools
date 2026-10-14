@@ -4,6 +4,7 @@ require_once __DIR__ . "/../auth.php";
 date_default_timezone_set("Asia/Karachi");
 
 include __DIR__ . "/../conn.php";
+include __DIR__ . "/command_functions.php";
 
 $branches = [];
 $btmt = "SELECT BCODE, BNAME FROM BRANCHES WHERE BCODE NOT IN 
@@ -47,12 +48,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $status[] = ['bcode' => $bcode, 'query' => '', 'status' => "Error connecting branch"];
                     } else {
                         foreach ($final_command as $s) {
+                            // Skip an INSERT whose exact row is already on this branch.
+                            $check = insert_row_exists($bconn, $s);
+                            if ($check['exists'] === true) {
+                                $status[] = ['bcode' => $bcode, 'query' => $s . ';', 'status' => 'Skipped: row already exists'];
+                                continue;
+                            }
+                            $note = $check['exists'] === null ? ' (duplicate check not done: ' . $check['reason'] . ')' : '';
+
                             $x = oci_parse($bconn, $s);
                             $result = @oci_execute($x);
                             $status[] = [
                                 'bcode' => $bcode,
                                 'query' => $s . ';',
-                                'status' => $result ? 'Executed successfully' : 'Execution failed: ' . oci_error($x)['message']
+                                'status' => ($result ? 'Executed successfully' : 'Execution failed: ' . oci_error($x)['message']) . $note
                             ];
                         }
                     }
