@@ -141,10 +141,13 @@
         }
     }
 
+    let hideBarTimer;
+
     async function runAll() {
         runBtn.disabled = true;
         let done = 0;
         progressEl.textContent = `0 / ${rows.length}`;
+        clearTimeout(hideBarTimer);
         progressTrack.classList.remove('opacity-0');
         progressBar.style.transform = 'scaleX(0)';
         let idx = 0;
@@ -161,6 +164,8 @@
 
         await Promise.all(Array.from({ length: CONCURRENCY }, worker));
         runBtn.disabled = false;
+        // Let the full bar register for a moment, then fade it away.
+        hideBarTimer = setTimeout(() => progressTrack.classList.add('opacity-0'), 400);
     }
 
     runBtn.addEventListener('click', runAll);

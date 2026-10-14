@@ -142,6 +142,8 @@ $iccode   = trim($_GET['iccode'] ?? '');
             }
         }
 
+        let hideBarTimer;
+
         async function runAll(iccode) {
             runBtn.disabled = true;
             totals.found = totals.missing = totals.down = 0;
@@ -149,6 +151,7 @@ $iccode   = trim($_GET['iccode'] ?? '');
 
             let idx = 0, done = 0;
             progressEl.textContent = `0 / ${rows.length}`;
+            clearTimeout(hideBarTimer);
             progressTrack.classList.remove('opacity-0');
             progressBar.style.transform = 'scaleX(0)';
             // Clear the previous card's results so stale rows can't be mistaken for this one.
@@ -164,6 +167,8 @@ $iccode   = trim($_GET['iccode'] ?? '');
 
             await Promise.all(Array.from({ length: CONCURRENCY }, worker));
             runBtn.disabled = false;
+            // Let the full bar register for a moment, then fade it away.
+            hideBarTimer = setTimeout(() => progressTrack.classList.add('opacity-0'), 400);
         }
 
         form.addEventListener('submit', (e) => {
