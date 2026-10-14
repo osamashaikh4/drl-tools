@@ -66,12 +66,20 @@ include __DIR__ . "/header.php";
     }
 
     #results td.cell-in-range {
-        background: #ecfdf5;
+        background: #1e293b;
+        color: #f8fafc;
     }
 
     #results td.cell-selected {
-        box-shadow: inset 0 0 0 2px #10b981;
-        background: #ecfdf5;
+        background: #0f172a;
+        color: #fff;
+        box-shadow: inset 0 0 0 2px #94a3b8;
+    }
+
+    /* NULL cells stay readable on the dark highlight. */
+    #results td.cell-in-range[data-null],
+    #results td.cell-selected[data-null] {
+        color: #cbd5e1;
     }
 
     .grid-table th,
