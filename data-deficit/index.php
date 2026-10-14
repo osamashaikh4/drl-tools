@@ -16,12 +16,11 @@ $branchNames = loadBranchNames($conn);
         <h1 class="text-xl font-bold text-slate-900 mb-1">Branch Data Deficit Check</h1>
         <div class="flex flex-wrap items-end gap-4">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">From</label>
-                <input type="date" id="pfrom" value="<?= htmlspecialchars($defaultFrom) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">To</label>
-                <input type="date" id="pto" value="<?= htmlspecialchars($defaultTo) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <label for="daterange" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Date Range</label>
+                <input type="text" id="daterange" name="daterange" readonly class="w-64 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white cursor-pointer">
+                <!-- The picker writes the chosen range here; deficit.js reads these. -->
+                <input type="hidden" id="pfrom" value="<?= htmlspecialchars($defaultFrom) ?>">
+                <input type="hidden" id="pto" value="<?= htmlspecialchars($defaultTo) ?>">
             </div>
             <button id="runCheck" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-5 py-2.5 rounded-lg shadow disabled:opacity-60 disabled:cursor-not-allowed">Check All Branches</button>
             <label class="hidden items-center gap-2 pb-2.5 cursor-pointer">
@@ -89,6 +88,21 @@ $branchNames = loadBranchNames($conn);
 
 <script>
     window.FILL_GROUPS = <?= json_encode(['A' => GROUP_A_TABLES, 'B' => GROUP_B_TABLES]) ?>;
+</script>
+<link rel="stylesheet" href="../assets/css/daterangepicker.css">
+<script src="../assets/js/moment.js"></script>
+<script src="../assets/js/daterangepicker.js"></script>
+<script>
+    // Same date range picker as the dengue app; the chosen range fills the hidden pfrom / pto.
+    $('#daterange').daterangepicker({
+        opens: 'right',
+        maxDate: new Date(),
+        startDate: moment($('#pfrom').val(), 'YYYY-MM-DD'),
+        endDate: moment($('#pto').val(), 'YYYY-MM-DD'),
+    }, function(start, end) {
+        $('#pfrom').val(start.format('YYYY-MM-DD'));
+        $('#pto').val(end.format('YYYY-MM-DD'));
+    });
 </script>
 <script src="assets/js/deficit.js"></script>
 <?php include __DIR__ . '/../footer.php'; ?>
