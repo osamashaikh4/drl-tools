@@ -183,7 +183,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
         </div>
     <?php endif; ?>
 
-    <form action="new_card.php" method="POST" class="space-y-6">
+    <form id="newCardForm" action="new_card.php" method="POST" class="space-y-6">
         <div class="<?= $panel ?>">
             <h2 class="<?= $title ?>"><span class="<?= $step ?>">1</span> Target Branch(es)</h2>
             <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
@@ -334,7 +334,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 
         <div class="<?= $panel ?>">
             <h2 class="<?= $title ?> justify-between">
-                <span class="flex items-center gap-2"><span class="<?= $step ?>">4</span> Family Members</span>
+                <span class="flex items-center gap-2"><span class="<?= $step ?>">4</span> Family Members <span id="familyCount" class="hidden ml-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tabular-nums"></span></span>
                 <button type="button" id="addFamily" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg">+ Add Member</button>
             </h2>
             <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Enter the name only — the relation is added in front automatically (e.g. <span class="font-mono text-slate-700">Wife= Farzana</span>).</p>
@@ -344,24 +344,57 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 
         <div class="flex items-center justify-between gap-4 pt-4">
             <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="dry_run" value="1" <?= isset($old['dry_run']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                <input type="checkbox" id="dryRun" name="dry_run" value="1" <?= isset($old['dry_run']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
                 <span class="text-sm font-semibold text-slate-700">Dry run <span class="font-normal text-slate-500">(show the inserts, change nothing)</span></span>
             </label>
             <div class="flex items-center gap-4">
-                <a href="index.php" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="createButton" type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span id="createSpinner" class="spinner hidden" aria-hidden="true"></span>
+                    <svg id="createIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Create Card
+                    <span id="createLabel">Create Card</span>
                 </button>
             </div>
         </div>
     </form>
 </div>
 
+<style>
+    /* A family member row slides in when added and fades out (faster) when removed. */
+    .family-row.row-enter {
+        animation: family-in 200ms var(--ease-out);
+    }
+
+    @keyframes family-in {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+    }
+
+    .family-row.row-leave {
+        opacity: 0;
+        transform: scale(0.98);
+        transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+        pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .family-row.row-enter {
+            animation-name: family-fade;
+        }
+
+        @keyframes family-fade {
+            from {
+                opacity: 0;
+            }
+        }
+    }
+</style>
 <template id="familyTemplate">
     <div class="family-row grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-3 rounded-xl border border-slate-200 bg-slate-50">
         <div class="sm:col-span-1">
@@ -415,7 +448,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
         // Renumber names (family[i][...]) and the generated holder codes after any add/remove.
         function renumber() {
             const code = $('#ICCODE').val().trim() || 'CARDCODE';
-            $rows.children('.family-row').each(function(i) {
+            $rows.children('.family-row:not(.row-leave)').each(function(i) {
                 const suffix = '-' + String(i + 1).padStart(2, '0');
                 $(this).find('.row-code').text(suffix).attr('title', code + suffix);
                 $(this).find('[data-name]').each(function() {
@@ -423,7 +456,9 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
                 });
             });
             $('#codePreview').text(code + '-01, ' + code + '-02 …');
-            $('#noFamily').toggle($rows.children().length === 0);
+            const count = $rows.children('.family-row:not(.row-leave)').length;
+            $('#noFamily').toggle(count === 0);
+            $('#familyCount').text(count).toggleClass('hidden', count === 0);
         }
 
         // Same rules as card_family_gender() / card_family_name() in card_functions.php.
@@ -449,20 +484,33 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
             $row.find('.saved-as').text(name && prefix ? 'Saved as: ' + prefix + '= ' + name : '');
         }
 
-        function addRow(values) {
+        // Rows restored after a failed submit appear as they were; rows the user adds slide in and get focus.
+        function addRow(values, fromUser = false) {
             const $row = $(template.content.firstElementChild.cloneNode(true));
             Object.entries(values || {}).forEach(function([k, v]) {
                 $row.find('[data-name="' + k + '"]').val(v);
             });
+            if (fromUser) $row.addClass('row-enter');
             $rows.append($row);
             updateSavedAs($row);
             renumber();
+            if (fromUser) $row.find('[data-name="RCODE"]').trigger('focus');
         }
 
-        $('#addFamily').on('click', function() { addRow(); });
+        $('#addFamily').on('click', function() { addRow({}, true); });
         $rows.on('click', '.remove-family', function() {
-            $(this).closest('.family-row').remove();
+            const $row = $(this).closest('.family-row');
+            if ($row.hasClass('row-leave')) return;
+            // Keep the keyboard user's place: the next row, else the previous one, else the Add button.
+            const $next = $row.nextAll('.family-row:not(.row-leave)').first();
+            const $prev = $row.prevAll('.family-row:not(.row-leave)').first();
+            const $focus = $next.length ? $next.find('[data-name="RCODE"]') : $prev.length ? $prev.find('[data-name="RCODE"]') : $('#addFamily');
+            $row.removeClass('row-enter').addClass('row-leave');
+            $row.find('[data-name]').removeAttr('name'); // a leaving row is no longer part of the form
             renumber();
+            $focus.trigger('focus');
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            setTimeout(function() { $row.remove(); renumber(); }, reduce ? 0 : 150);
         });
         $('#ICCODE').on('input', renumber);
 
@@ -479,6 +527,26 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
         $('select[name="ICHGENDER"]').on('change', function() {
             $rows.children('.family-row').each(function() { updateSavedAs($(this)); });
         });
+
+        // Enter in a text box must not submit: one stray key would create the card on every chosen branch.
+        document.getElementById('newCardForm').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.matches('input:not([type="checkbox"]):not([type="submit"])')) e.preventDefault();
+        });
+
+        // Creating runs on the server before the results page loads: show it is working and block a second submit.
+        const createButton = document.getElementById('createButton');
+        function setCreating(on) {
+            createButton.disabled = on;
+            document.getElementById('createSpinner').classList.toggle('hidden', !on);
+            document.getElementById('createIcon').classList.toggle('hidden', on);
+            document.getElementById('createLabel').textContent = on ? (document.getElementById('dryRun').checked ? 'Checking…' : 'Creating…') : 'Create Card';
+        }
+        document.getElementById('newCardForm').addEventListener('submit', function(e) {
+            if (createButton.disabled) return e.preventDefault();
+            setCreating(true);
+        });
+        // Coming back with the browser's Back button can restore the page mid-"Creating…".
+        window.addEventListener('pageshow', function() { setCreating(false); });
 
         <?php foreach ($familyRows as $f): ?>
             addRow(<?= json_encode(array_map('strval', (array)$f), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>);
