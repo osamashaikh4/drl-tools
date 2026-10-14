@@ -14,6 +14,143 @@ function commands_schema($conn)
     return $schema;
 }
 
+const COMMANDS_MAX_ROWS = 500;
+
+function commands_connect_branch($bcode, $connections, $timeoutSeconds = 6)
+{
+    if (!isset($connections[$bcode])) {
+        return false;
+    }
+    $sid = in_array($bcode, ['13', '24', '27'], true) ? 'dbnc' : 'drl';
+    $descriptor = "(DESCRIPTION=(CONNECT_TIMEOUT={$timeoutSeconds})(TRANSPORT_CONNECT_TIMEOUT={$timeoutSeconds})"
+        . "(ADDRESS=(PROTOCOL=TCP)(HOST={$connections[$bcode]})(PORT=1521))(CONNECT_DATA=(SERVICE_NAME={$sid})))";
+    return @oci_connect('drl', 'drl', $descriptor) ?: false;
+}
+
+// Splits a script into statements on ";" outside quotes and -- / /* */ comments.
+function split_sql_statements($script)
+{
+    $statements = [];
+    $buf = '';
+    $len = strlen($script);
+
+    for ($i = 0; $i < $len; $i++) {
+        $ch   = $script[$i];
+        $next = $i + 1 < $len ? $script[$i + 1] : '';
+
+        if ($ch === '-' && $next === '-') {
+            $end = strpos($script, "\n", $i);
+            $end = $end === false ? $len : $end;
+            $buf .= substr($script, $i, $end - $i);
+            $i = $end - 1;
+            continue;
+        }
+        if ($ch === '/' && $next === '*') {
+            $end = strpos($script, '*/', $i + 2);
+            $end = $end === false ? $len : $end + 2;
+            $buf .= substr($script, $i, $end - $i);
+            $i = $end - 1;
+            continue;
+        }
+        if ($ch === "'" || $ch === '"') {
+            // Copy the whole quoted literal; '' inside a string is an escaped quote.
+            $end = $i + 1;
+            while ($end < $len) {
+                if ($script[$end] === $ch) {
+                    if ($ch === "'" && $end + 1 < $len && $script[$end + 1] === "'") {
+                        $end += 2;
+                        continue;
+                    }
+                    break;
+                }
+                $end++;
+            }
+            $buf .= substr($script, $i, $end - $i + 1);
+            $i = $end;
+            continue;
+        }
+        if ($ch === ';') {
+            $statements[] = $buf;
+            $buf = '';
+            continue;
+        }
+        $buf .= $ch;
+    }
+    $statements[] = $buf;
+
+    // Drop comment-only / empty pieces, and comments in front of a statement so it starts with its keyword.
+    $out = [];
+    foreach ($statements as $s) {
+        $code = trim(preg_replace(['~/\*.*?\*/~s', '~--[^\n]*~'], '', $s));
+        if ($code !== '') {
+            $out[] = trim(preg_replace('~^(\s*(--[^\n]*(\n|$)|/\*.*?\*/))+~s', '', $s));
+        }
+    }
+    return $out;
+}
+
+// 'select' for SELECT / WITH queries, 'dml' for INSERT / UPDATE, null for anything else.
+function statement_kind($sql)
+{
+    $code = trim(preg_replace(['~/\*.*?\*/~s', '~--[^\n]*~'], '', $sql));
+    if (preg_match('/^(SELECT|WITH)\b/i', $code)) {
+        // A locking query is not read-only.
+        return preg_match('/\bFOR\s+UPDATE\b/i', $code) ? null : 'select';
+    }
+    if (preg_match('/^(INSERT|UPDATE)\b/i', $code)) {
+        return 'dml';
+    }
+    return null;
+}
+
+// Runs a SELECT read-only (rolled back) and returns its columns and up to COMMANDS_MAX_ROWS rows.
+function run_select($bconn, $sql)
+{
+    $stmt = @oci_parse($bconn, $sql);
+    if (!$stmt || !@oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
+        $e = $stmt ? oci_error($stmt) : oci_error($bconn);
+        @oci_rollback($bconn);
+        return ['ok' => false, 'error' => $e['message'] ?? 'Query failed'];
+    }
+
+    $columns = [];
+    for ($i = 1, $n = oci_num_fields($stmt); $i <= $n; $i++) {
+        $columns[] = oci_field_name($stmt, $i);
+    }
+
+    $rows = [];
+    $truncated = false;
+    while ($row = oci_fetch_array($stmt, OCI_NUM + OCI_RETURN_NULLS + OCI_RETURN_LOBS)) {
+        if (count($rows) >= COMMANDS_MAX_ROWS) {
+            $truncated = true;
+            break;
+        }
+        $rows[] = $row;
+    }
+    oci_free_statement($stmt);
+    oci_rollback($bconn);
+
+    return ['ok' => true, 'columns' => $columns, 'rows' => $rows, 'truncated' => $truncated];
+}
+
+// Runs an INSERT / UPDATE (committed), skipping an INSERT whose exact row already exists.
+function run_dml($bconn, $sql)
+{
+    $check = insert_row_exists($bconn, $sql);
+    if ($check['exists'] === true) {
+        return ['ok' => true, 'skipped' => true, 'status' => 'Skipped: row already exists', 'affected' => 0];
+    }
+    $note = $check['exists'] === null ? ' (duplicate check not done: ' . $check['reason'] . ')' : '';
+
+    $stmt = @oci_parse($bconn, $sql);
+    if (!$stmt || !@oci_execute($stmt)) {
+        $e = $stmt ? oci_error($stmt) : oci_error($bconn);
+        return ['ok' => false, 'status' => 'Execution failed: ' . ($e['message'] ?? 'unknown error') . $note];
+    }
+    $affected = oci_num_rows($stmt);
+    return ['ok' => true, 'status' => 'Executed successfully' . $note, 'affected' => $affected];
+}
+
 // Splits a SQL list on commas that are not inside quotes or parentheses.
 function split_sql_list($list)
 {
