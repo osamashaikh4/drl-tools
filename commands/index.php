@@ -405,10 +405,10 @@ include __DIR__ . "/header.php";
                     }
                     const head = sec.querySelector('thead tr');
                     if (!head.children.length) {
-                        head.innerHTML = '<th class="px-3 py-2 text-left font-semibold text-slate-600">BRANCH</th>' + r.columns.map((c) => '<th class="px-3 py-2 text-left font-semibold text-slate-600">' + esc(c) + '</th>').join('');
+                        head.innerHTML = r.columns.map((c) => '<th class="px-3 py-2 text-left font-semibold text-slate-600">' + esc(c) + '</th>').join('');
                     }
                     tbody.insertAdjacentHTML('beforeend', r.rows.map((row) =>
-                        '<tr class="border-b border-slate-100 hover:bg-slate-50 row-in"><td class="px-3 py-1.5 text-slate-500" title="' + esc(branchName[bcode]) + '">' + esc(bcode) + '</td>' + row.map(cell).join('') + '</tr>'
+                        '<tr class="border-b border-slate-100 hover:bg-slate-50 row-in">' + row.map(cell).join('') + '</tr>'
                     ).join(''));
                     sec.rows = (sec.rows || 0) + r.rows.length;
                     sec.querySelector('.stmt-count').textContent = sec.rows + ' row' + (sec.rows === 1 ? '' : 's');
