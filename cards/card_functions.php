@@ -281,6 +281,34 @@ function card_audit_values()
     ];
 }
 
+// Gender implied by a family relation; a spouse is the opposite of the cardholder.
+function card_family_gender($rcode, $gender, $holderGender = '')
+{
+    if ($gender !== '') {
+        return $gender;
+    }
+    $implied = ['FA' => 'M', 'CS' => 'M', 'MO' => 'F', 'CD' => 'F'];
+    if (isset($implied[$rcode])) {
+        return $implied[$rcode];
+    }
+    if ($rcode === 'SP' && in_array($holderGender, ['M', 'F'], true)) {
+        return $holderGender === 'M' ? 'F' : 'M';
+    }
+    return '';
+}
+
+// Family member names are stored as "<Relation>= <Name>", e.g. "Wife= Farzana", like the existing data.
+function card_family_name($rcode, $gender, $name, $relationName = '')
+{
+    $prefixes = ['FA' => 'Father', 'MO' => 'Mother', 'CS' => 'Son', 'CD' => 'Daughter'];
+    $prefix   = $rcode === 'SP' ? ($gender === 'M' ? 'Husband' : 'Wife') : ($prefixes[$rcode] ?? $relationName);
+
+    // Don't double up if the prefix was typed in already.
+    $name = preg_replace('/^\s*(father|mother|son|daughter|wife|husband|spouse)\s*=\s*/i', '', $name);
+
+    return $prefix === '' ? $name : $prefix . '= ' . $name;
+}
+
 function card_form_date($value)
 {
     $value = trim((string)$value);

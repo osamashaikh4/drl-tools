@@ -98,13 +98,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'ICHBLOODGROUP'   => $v('ICHBLOODGROUP'),
         ] + $stamp];
 
+        $relationNames = [];
+        foreach (card_query_all($main_conn, "SELECT RCODE, RNAME FROM RELATIONS") as $r) {
+            $relationNames[$r['RCODE']] = $r['RNAME'];
+        }
+
         foreach ($family as $i => $f) {
+            $gender    = card_family_gender($f['RCODE'], $f['ICHGENDER'] ?? '', $v('ICHGENDER'));
             $holders[] = [
                 'ICCODE'        => $iccode,
                 'RCODE'         => $f['RCODE'],
                 'ICHECODE'      => $iccode . '-' . str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT),
-                'ICHENAME'      => $f['ICHENAME'],
-                'ICHGENDER'     => $f['ICHGENDER'] ?? '',
+                'ICHENAME'      => card_family_name($f['RCODE'], $gender, $f['ICHENAME'], $relationNames[$f['RCODE']] ?? ''),
+                'ICHGENDER'     => $gender,
                 'ICHCNIC_BFORM' => $f['ICHCNIC_BFORM'] ?? '',
                 'ICHCONTACT_NO' => $f['ICHCONTACT_NO'] ?? '',
                 'ICHDOB'        => card_form_date($f['ICHDOB'] ?? ''),
@@ -331,7 +337,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
                 <span class="flex items-center gap-2"><span class="<?= $step ?>">4</span> Family Members</span>
                 <button type="button" id="addFamily" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg">+ Add Member</button>
             </h2>
-            <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Existing cards write names like <span class="font-mono text-slate-700">Wife= Farzana</span>.</p>
+            <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Enter the name only — the relation is added in front automatically (e.g. <span class="font-mono text-slate-700">Wife= Farzana</span>).</p>
             <div id="familyRows" class="space-y-3"></div>
             <p id="noFamily" class="text-sm text-slate-400">No family members added.</p>
         </div>
@@ -373,7 +379,8 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
         </div>
         <div class="sm:col-span-3">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Name <span class="text-red-500">*</span></label>
-            <input type="text" data-name="ICHENAME" maxlength="1000" placeholder="e.g. Wife= Farzana" class="<?= $input ?> bg-white">
+            <input type="text" data-name="ICHENAME" maxlength="990" placeholder="e.g. Farzana" class="<?= $input ?> bg-white">
+            <p class="saved-as text-xs text-slate-500 mt-1 font-mono truncate"></p>
         </div>
         <div class="sm:col-span-1">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
@@ -419,12 +426,36 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
             $('#noFamily').toggle($rows.children().length === 0);
         }
 
+        // Same rules as card_family_gender() / card_family_name() in card_functions.php.
+        const impliedGender = { FA: 'M', CS: 'M', MO: 'F', CD: 'F' };
+        const prefixes = { FA: 'Father', MO: 'Mother', CS: 'Son', CD: 'Daughter' };
+
+        function rowGender($row) {
+            const rcode = $row.find('[data-name="RCODE"]').val();
+            const g = $row.find('[data-name="ICHGENDER"]').val();
+            if (g) return g;
+            if (impliedGender[rcode]) return impliedGender[rcode];
+            const holder = $('select[name="ICHGENDER"]').val();
+            return rcode === 'SP' && holder ? (holder === 'M' ? 'F' : 'M') : '';
+        }
+
+        function updateSavedAs($row) {
+            const $rel = $row.find('[data-name="RCODE"]');
+            const rcode = $rel.val();
+            const name = $row.find('[data-name="ICHENAME"]').val().trim()
+                .replace(/^\s*(father|mother|son|daughter|wife|husband|spouse)\s*=\s*/i, '');
+            const prefix = rcode === 'SP' ? (rowGender($row) === 'M' ? 'Husband' : 'Wife')
+                : (prefixes[rcode] || (rcode ? $rel.find('option:selected').text() : ''));
+            $row.find('.saved-as').text(name && prefix ? 'Saved as: ' + prefix + '= ' + name : '');
+        }
+
         function addRow(values) {
             const $row = $(template.content.firstElementChild.cloneNode(true));
             Object.entries(values || {}).forEach(function([k, v]) {
                 $row.find('[data-name="' + k + '"]').val(v);
             });
             $rows.append($row);
+            updateSavedAs($row);
             renumber();
         }
 
@@ -434,6 +465,20 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
             renumber();
         });
         $('#ICCODE').on('input', renumber);
+
+        // Picking a relation fills in its gender (spouse: opposite of the holder) unless one is already chosen.
+        $rows.on('change', '[data-name="RCODE"]', function() {
+            const $row = $(this).closest('.family-row');
+            const $g = $row.find('[data-name="ICHGENDER"]');
+            if (!$g.val()) $g.val(rowGender($row));
+            updateSavedAs($row);
+        });
+        $rows.on('input change', '[data-name="ICHENAME"], [data-name="ICHGENDER"]', function() {
+            updateSavedAs($(this).closest('.family-row'));
+        });
+        $('select[name="ICHGENDER"]').on('change', function() {
+            $rows.children('.family-row').each(function() { updateSavedAs($(this)); });
+        });
 
         <?php foreach ($familyRows as $f): ?>
             addRow(<?= json_encode(array_map('strval', (array)$f), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>);
