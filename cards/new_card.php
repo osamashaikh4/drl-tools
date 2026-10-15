@@ -19,7 +19,10 @@ function old_selected($key, $value, $default = '')
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $targetBranches = (array)($_POST['bcode'] ?? []);
+    // "All branches" is expanded here, so it always means every branch the tool knows about.
+    $targetBranches = isset($_POST['all_branches'])
+        ? array_map('strval', array_keys(card_branches_list($conn, $connections)))
+        : (array)($_POST['bcode'] ?? []);
     $dryRun         = isset($_POST['dry_run']);
     $v              = fn($k) => trim((string)($_POST[$k] ?? ''));
     $iccode         = $v('ICCODE');
@@ -185,12 +188,21 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 
     <form id="newCardForm" action="new_card.php" method="POST" class="space-y-6">
         <div class="<?= $panel ?>">
-            <h2 class="<?= $title ?>"><span class="<?= $step ?>">1</span> Target Branch(es)</h2>
+            <h2 class="<?= $title ?> justify-between">
+                <span class="flex items-center gap-2"><span class="<?= $step ?>">1</span> Target Branch(es)</span>
+                <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                    <input type="checkbox" id="allBranches" name="all_branches" value="1" <?= isset($old['all_branches']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                    All branches <span class="font-normal text-slate-500 tabular-nums">(<?= count($branches) ?>)</span>
+                </label>
+            </h2>
+            <div id="targetPicker">
             <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
                 <?php foreach ($branches as $bcode => $bname): ?>
                     <option value="<?= htmlspecialchars($bcode) ?>" <?= in_array((string)$bcode, (array)($old['bcode'] ?? []), true) ? 'selected' : '' ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                 <?php endforeach; ?>
             </select>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">Each branch is checked first: if the card already exists there it is not inserted again, and only its missing holders are added.</p>
         </div>
 
         <div class="<?= $panel ?>">
@@ -440,6 +452,16 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
 <script>
     $(document).ready(function() {
         $('.branches_select').select2({ placeholder: "Select target branches" });
+
+        // "All branches": the server expands it to every branch, so the picker is set aside while it is ticked.
+        const $allBranches = $('#allBranches');
+        function applyAllBranches() {
+            const all = $allBranches.is(':checked');
+            $('.branches_select').prop('disabled', all).prop('required', !all).trigger('change.select2');
+            $('#targetPicker').toggleClass('opacity-50 pointer-events-none', all);
+        }
+        $allBranches.on('change', applyAllBranches);
+        applyAllBranches();
         $('.tag_select').select2({ placeholder: "Select", allowClear: true });
 
         const $rows = $('#familyRows');
