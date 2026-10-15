@@ -564,7 +564,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         function familyLabel(f, holderGender) {
             const g = f.gender || (f.rcode === 'SP' ? (holderGender === 'M' ? 'F' : holderGender === 'F' ? 'M' : '') : '');
             const prefix = f.rcode === 'SP' ? (g === 'M' ? 'Husband' : 'Wife') : REL_LABEL[f.rcode];
-            return prefix + '= ' + f.name;
+            return prefix.toUpperCase() + '=' + f.name;
         }
 
         function renderPreview() {

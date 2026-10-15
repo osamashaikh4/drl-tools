@@ -349,7 +349,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
                 <span class="flex items-center gap-2"><span class="<?= $step ?>">4</span> Family Members <span id="familyCount" class="hidden ml-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tabular-nums"></span></span>
                 <button type="button" id="addFamily" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg">+ Add Member</button>
             </h2>
-            <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Enter the name only — the relation is added in front automatically (e.g. <span class="font-mono text-slate-700">Wife= Farzana</span>).</p>
+            <p class="text-xs text-slate-500 mb-4">Holder codes are generated as <span class="font-mono text-slate-700" id="codePreview">CARDCODE-01, -02 …</span> in the order below. Enter the name only — the relation is added in front automatically (e.g. <span class="font-mono text-slate-700">WIFE=Farzana</span>).</p>
             <div id="familyRows" class="space-y-3"></div>
             <p id="noFamily" class="text-sm text-slate-400">No family members added.</p>
         </div>
@@ -503,7 +503,7 @@ $title  = 'text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-10
                 .replace(/^\s*(father|mother|son|daughter|wife|husband|spouse)\s*=\s*/i, '');
             const prefix = rcode === 'SP' ? (rowGender($row) === 'M' ? 'Husband' : 'Wife')
                 : (prefixes[rcode] || (rcode ? $rel.find('option:selected').text() : ''));
-            $row.find('.saved-as').text(name && prefix ? 'Saved as: ' + prefix + '= ' + name : '');
+            $row.find('.saved-as').text(name && prefix ? 'Saved as: ' + prefix.toUpperCase() + '=' + name : '');
         }
 
         // Rows restored after a failed submit appear as they were; rows the user adds slide in and get focus.

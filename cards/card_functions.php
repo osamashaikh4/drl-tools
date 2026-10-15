@@ -297,7 +297,7 @@ function card_family_gender($rcode, $gender, $holderGender = '')
     return '';
 }
 
-// Family member names are stored as "<Relation>= <Name>", e.g. "Wife= Farzana", like the existing data.
+// Family member names are stored as "<RELATION>=<Name>", e.g. "WIFE=Farzana" (relation in capitals, no space).
 function card_family_name($rcode, $gender, $name, $relationName = '')
 {
     $prefixes = ['FA' => 'Father', 'MO' => 'Mother', 'CS' => 'Son', 'CD' => 'Daughter'];
@@ -306,7 +306,7 @@ function card_family_name($rcode, $gender, $name, $relationName = '')
     // Don't double up if the prefix was typed in already.
     $name = preg_replace('/^\s*(father|mother|son|daughter|wife|husband|spouse)\s*=\s*/i', '', $name);
 
-    return $prefix === '' ? $name : $prefix . '= ' . $name;
+    return $prefix === '' ? $name : strtoupper($prefix) . '=' . $name;
 }
 
 function card_form_date($value)
