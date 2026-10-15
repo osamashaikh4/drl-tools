@@ -9,7 +9,11 @@ set_time_limit(600);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sourceBcode    = trim($_POST['source_bcode'] ?? '');
     $iccodes        = array_values(array_filter(array_map('trim', (array)($_POST['iccode'] ?? []))));
-    $targetBranches = array_values(array_diff((array)($_POST['bcode'] ?? []), [$sourceBcode]));
+    // "All branches" is expanded here (minus the source), so it always means every branch the tool knows about.
+    $requested     = isset($_POST['all_branches'])
+        ? array_map('strval', array_keys(card_branches_list($conn, $connections)))
+        : (array)($_POST['bcode'] ?? []);
+    $targetBranches = array_values(array_diff($requested, [$sourceBcode]));
     $dryRun         = isset($_POST['dry_run']);
 
     if ($sourceBcode === '' || empty($iccodes) || empty($targetBranches)) {
@@ -103,13 +107,21 @@ $branches = card_branches_list($conn, $connections);
                 Select Target Branch(es)
             </h2>
             <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Target Branch <span class="text-red-500">*</span></label>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-semibold text-slate-700">Target Branch <span class="text-red-500">*</span></label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                        <input type="checkbox" id="allBranches" name="all_branches" value="1" <?= isset($_POST['all_branches']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
+                        All branches <span id="allCount" class="font-normal text-slate-500 tabular-nums" data-total="<?= count($branches) ?>">(<?= count($branches) ?>)</span>
+                    </label>
+                </div>
+                <div id="targetPicker">
                 <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
                     <?php foreach ($branches as $bcode => $bname): ?>
                         <option value="<?= htmlspecialchars($bcode) ?>"><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <p class="text-xs text-slate-500 mt-1.5">Cards that already exist on a target are left unchanged; only their missing holders are added.</p>
+                </div>
+                <p class="text-xs text-slate-500 mt-1.5">Each branch is checked first: if the card already exists there it is not copied again, and only its missing holders are added.</p>
             </div>
         </div>
 
@@ -141,8 +153,48 @@ $branches = card_branches_list($conn, $connections);
         const $hint = $('#cardHint');
 
         $('.source_branch_select').select2({ placeholder: "Select source branch" });
-        $cards.select2({ placeholder: "Search cards by code or holder name" });
+        // Cards are searched on the source branch as you type (code or holder name), not downloaded up front.
+        $cards.select2({
+            placeholder: "Type a card code or holder name",
+            minimumInputLength: 1,
+            ajax: {
+                url: 'ajax_cards.php',
+                dataType: 'json',
+                delay: 300,
+                data: (params) => ({ bcode: $('.source_branch_select').val(), q: params.term }),
+                processResults: (data) => ({
+                    results: (data.results || []).concat(data.more
+                        ? [{ id: '__more__', text: 'Showing the first 50 matches — keep typing to narrow down', disabled: true }]
+                        : []),
+                }),
+            },
+            language: {
+                inputTooShort: () => 'Type a card code or holder name',
+                searching: () => 'Searching…',
+                noResults: () => 'No cards match on this branch',
+                errorLoading: () => 'Search failed — try again',
+            },
+        });
         $targets.select2({ placeholder: "Select target branches" });
+
+        // "All branches": the server expands it to every branch, so the picker is set aside while it is ticked.
+        const $allBranches = $('#allBranches');
+        function applyAllBranches() {
+            const all = $allBranches.is(':checked');
+            $('.branches_select').prop('disabled', all).prop('required', !all).trigger('change.select2');
+            $('#targetPicker').toggleClass('opacity-50 pointer-events-none', all);
+        }
+        $allBranches.on('change', applyAllBranches);
+        applyAllBranches();
+        // The source branch is never a target, so "All" is one fewer once a source is picked.
+        function updateAllCount() {
+            const total = Number($('#allCount').data('total'));
+            const n = $('.source_branch_select').val() ? total - 1 : total;
+            $('#allCount').text('(' + n + (n < total ? ', except the source' : '') + ')');
+        }
+        $('.source_branch_select').on('change', updateAllCount);
+        updateAllCount();
+
 
         const SPINNER = '<span class="spinner" aria-hidden="true"></span>';
         const fmt = (n) => n.toLocaleString('en-US');
@@ -152,7 +204,7 @@ $branches = card_branches_list($conn, $connections);
         function updateHint() {
             if (!loaded) return;
             const picked = ($cards.val() || []).length;
-            $hint.text(fmt(loaded.count) + ' cards on branch ' + loaded.bcode + (picked ? ' · ' + fmt(picked) + ' selected' : '.'));
+            $hint.text(fmt(loaded.count) + ' cards on branch ' + loaded.bcode + (picked ? ' · ' + fmt(picked) + ' selected' : ' — type to search.'));
         }
 
         function loadCards(bcode) {
@@ -163,17 +215,14 @@ $branches = card_branches_list($conn, $connections);
                 $hint.text('Select a source branch to load its cards.');
                 return;
             }
-            $hint.html(SPINNER + ' Loading cards from branch ' + $('<span>').text(bcode).html() + '…');
+            $hint.html(SPINNER + ' Connecting to branch ' + $('<span>').text(bcode).html() + '…');
 
-            $.getJSON('ajax_cards.php', { bcode: bcode })
-                .done(function(cards) {
+            // Only a count up front (it also confirms the branch is reachable); cards are searched as you type.
+            $.getJSON('ajax_cards.php', { bcode: bcode, count: 1 })
+                .done(function(data) {
                     if (token !== loadToken) return;
-                    // Build every option at once; appending thousands one by one is slow.
-                    const frag = document.createDocumentFragment();
-                    cards.forEach(function(c) { frag.appendChild(new Option(c.text, c.id)); });
-                    $cards[0].appendChild(frag);
                     $cards.prop('disabled', false).trigger('change');
-                    loaded = { bcode: bcode, count: cards.length };
+                    loaded = { bcode: bcode, count: data.total || 0 };
                     updateHint();
                 })
                 .fail(function(xhr) {
