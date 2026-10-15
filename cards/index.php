@@ -30,6 +30,15 @@ $actions = [
         'color' => 'sky',
         'icon'  => 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
     ],
+    [
+        'title' => 'Import Excel',
+        'tag'   => 'Bulk Entry',
+        'note'  => 'Map sheet columns to card fields',
+        'link'  => 'import_cards.php',
+        'cta'   => 'Import',
+        'color' => 'teal',
+        'icon'  => 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
+    ],
 ];
 ?>
 
@@ -46,7 +55,7 @@ $actions = [
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
         <?php foreach ($actions as $a): $c = $a['color']; ?>
             <a href="<?= $a['link'] ?>" class="press group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition duration-200 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-<?= $c ?>-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
