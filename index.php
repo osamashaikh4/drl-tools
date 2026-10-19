@@ -20,7 +20,7 @@ include __DIR__ . '/header.php';
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         <?php foreach ($TOOLS as $slug => $tool): $c = $tool['color']; ?>
-            <a href="<?= htmlspecialchars($tool['folder']) ?>/index.php" class="press group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition duration-200 flex flex-col justify-between relative overflow-hidden">
+            <a href="<?= htmlspecialchars($tool['link'] ?? $tool['folder'] . '/index.php') ?>" class="press group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-<?= $c ?>-300 transition duration-200 flex flex-col justify-between relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-<?= $c ?>-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
 
                 <div class="relative z-10">

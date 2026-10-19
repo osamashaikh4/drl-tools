@@ -2,6 +2,7 @@
 // Registry of tools shown on the dashboard and in the top nav.
 // To add a new tool: create its folder next to this file and add an entry here.
 //   folder      - folder name inside drl-tools (its index.php is the entry page)
+//   link        - optional entry page used instead of folder/index.php (for root-level pages)
 //   color       - tailwind color name used for the card accent
 //   icon        - svg path data (24x24, stroke icons)
 return [
@@ -32,5 +33,13 @@ return [
         'folder'      => 'cards',
         'color'       => 'emerald',
         'icon'        => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    ],
+    'network' => [
+        'name'        => 'Network Status',
+        'description' => 'Ping, listener and database checks for every branch server with response speed.',
+        'folder'      => null,
+        'link'        => 'network_status.php',
+        'color'       => 'teal',
+        'icon'        => 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0',
     ],
 ];

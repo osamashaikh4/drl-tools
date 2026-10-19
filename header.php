@@ -108,8 +108,11 @@ $pageTitle   = $pageTitle ?? (isset($TOOLS[$currentTool]) ? $TOOLS[$currentTool]
                     </a>
 
                     <nav class="flex gap-1 overflow-x-auto">
-                        <?php foreach ($TOOLS as $slug => $tool): ?>
-                            <a href="<?= $base . $tool['folder'] ?>/index.php" class="<?= $currentTool === $tool['folder'] ? 'bg-white/15 text-white font-semibold' : 'text-slate-300 hover:text-white hover:bg-white/10' ?> px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors">
+                        <?php foreach ($TOOLS as $slug => $tool):
+                            $active = isset($tool['link'])
+                                ? $currentTool === null && basename($_SERVER['SCRIPT_NAME']) === $tool['link']
+                                : $currentTool === $tool['folder']; ?>
+                            <a href="<?= $base . ($tool['link'] ?? $tool['folder'] . '/index.php') ?>" class="<?= $active ?'bg-white/15 text-white font-semibold' : 'text-slate-300 hover:text-white hover:bg-white/10' ?> px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors">
                                 <?= htmlspecialchars($tool['name']) ?>
                             </a>
                         <?php endforeach; ?>
