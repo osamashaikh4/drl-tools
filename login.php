@@ -14,10 +14,12 @@ if (is_logged_in()) {
 
 $error = null;
 if (isset($_POST['comname']) && isset($_POST['compwd'])) {
-    if ($_POST['comname'] === $USER_NAME && $_POST['compwd'] === $USER_PASS) {
+    $name = (string) $_POST['comname'];
+    $pass = (string) $_POST['compwd'];
+    if (isset($USERS[$name]) && hash_equals($USERS[$name]['pass'], $pass)) {
         session_regenerate_id(true);
-        $_SESSION['comname'] = $_POST['comname'];
-        $_SESSION['compwd']  = $_POST['compwd'];
+        $_SESSION['comname'] = $name;
+        $_SESSION['compwd']  = $pass;
         header("Location: " . $next);
         exit();
     } else {
