@@ -122,15 +122,12 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
             <p id="status" class="text-xs text-slate-500 tabular-nums"></p>
             <div class="flex gap-3">
-                <button id="downloadButton" type="button" disabled class="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download Excel
-                </button>
                 <button id="runButton" type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                     <span id="runSpinner" class="spinner hidden" aria-hidden="true"></span>
-                    <span id="runLabel">Get Counts</span>
+                    <svg id="runIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span id="runLabel">Download Excel</span>
                 </button>
             </div>
         </div>
@@ -153,7 +150,8 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         function setRunning(on) {
             $('#runButton').prop('disabled', on);
             $('#runSpinner').toggleClass('hidden', !on);
-            $('#runLabel').text(on ? 'Counting…' : 'Get Counts');
+            $('#runIcon').toggleClass('hidden', on);
+            $('#runLabel').text(on ? 'Counting…' : 'Download Excel');
         }
 
         // Rows of one department for one doctor: only branches where the doctor has reports.
@@ -215,7 +213,6 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             });
 
             setRunning(true);
-            $('#downloadButton').prop('disabled', true);
             $('#results').empty();
             const started = Date.now();
             const tick = setInterval(() => $('#status').html(SPINNER + ' Counting ' + esc(from) + ' to ' + esc(to) + ' … ' + Math.round((Date.now() - started) / 1000) + 's'), 1000);
@@ -245,8 +242,8 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                         data
                     };
                     render();
-                    $('#downloadButton').prop('disabled', false);
-                    $('#status').text('Done in ' + Math.round((Date.now() - started) / 1000) + 's.');
+                    downloadExcel();
+                    $('#status').text('Downloaded in ' + Math.round((Date.now() - started) / 1000) + 's.');
                 })
                 .fail(function(xhr) {
                     const msg = (xhr.responseJSON && xhr.responseJSON.error) || (xhr.statusText === 'timeout' ? 'The query timed out' : 'The query failed');
@@ -264,8 +261,7 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         });
 
         // Same layout as the monthly sheet: one sheet per doctor, histopathology in A–D, cytology in F–I.
-        $('#downloadButton').on('click', function() {
-            if (!report) return;
+        function downloadExcel() {
             const wb = XLSX.utils.book_new();
             report.doctors.forEach((d) => {
                 const aoa = [
@@ -352,7 +348,7 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                 XLSX.utils.book_append_sheet(wb, ws, DOCTORS[d].replace(/[\\\/?*\[\]:]/g, ' ').slice(0, 31));
             });
             XLSX.writeFile(wb, 'HistoDRCounts(' + periodLabel(report.from, report.to) + ').xlsx');
-        });
+        }
 
         // "SEP-26" for a single calendar month, otherwise the two dates.
         function periodLabel(from, to) {
