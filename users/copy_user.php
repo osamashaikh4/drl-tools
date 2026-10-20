@@ -4,9 +4,15 @@ require_once __DIR__ . '/../auth.php';
 include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/user_functions.php';
 
+// Several users onto several branches can take a while.
+set_time_limit(600);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['ecode'])) {
-        $sourceEcode    = trim($_POST['ecode']);
+        // One or more employees: the picker posts ecode[]; the manual fallback takes ECODEs separated by commas or spaces.
+        $sourceEcodes   = array_values(array_unique(array_filter(array_map('trim', is_array($_POST['ecode'])
+            ? $_POST['ecode']
+            : preg_split('/[\s,]+/', (string)$_POST['ecode'])), 'strlen')));
         // "All branches" is expanded here, so it always means every branch the tool knows about.
         $targetBranches = isset($_POST['all_branches'])
             ? array_map('strval', array_keys(get_branches_list($conn, $connections)))
@@ -18,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // inside copy_user_to_branch(); this passed value is just a fallback.
         $userType       = 'LAB';
 
-        if (empty($sourceEcode) || empty($targetBranches) || empty($userPassword)) {
-            $errorMsg = "Please select a user, at least one target branch and enter a password.";
+        if (empty($sourceEcodes) || empty($targetBranches) || empty($userPassword)) {
+            $errorMsg = "Please select at least one user, at least one target branch and enter a password.";
         } else {
             $allStatus = [];
             foreach ($targetBranches as $bcode) {
@@ -37,8 +43,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $allStatus[] = ['bcode' => $bcode, 'query' => "Connect as {$admin_user}", 'status' => "Privileged (system) connection failed — grants will fail: " . ($e['message'] ?? 'unknown error')];
                             }
                         }
-                        $res = copy_user_to_branch($main_conn, $bconn, $bcode, $sourceEcode, $userPassword, $userType, $isIncharge, $adminConn);
-                        $allStatus = array_merge($allStatus, $res);
+                        // Every user is copied over the same branch connections, with the same password.
+                        foreach ($sourceEcodes as $sourceEcode) {
+                            $res = copy_user_to_branch($main_conn, $bconn, $bcode, $sourceEcode, $userPassword, $userType, $isIncharge, $adminConn);
+                            // With several users, label each result row with whose copy it belongs to.
+                            if (count($sourceEcodes) > 1) {
+                                foreach ($res as &$row) {
+                                    $row['bcode'] = $row['bcode'] . ' / ' . $sourceEcode;
+                                }
+                                unset($row);
+                            }
+                            $allStatus = array_merge($allStatus, $res);
+                        }
                     }
                 }
             }
@@ -90,14 +106,13 @@ $employees = get_employees_list($main_conn);
         <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
             <h2 class="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
-                Select Employee
+                Select Employee(s)
             </h2>
 
             <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Employee<span class="text-red-500">*</span></label>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Employee(s) <span class="text-red-500">*</span></label>
                 <?php if (!empty($employees)): ?>
-                    <select required class="user_select w-full" name="ecode">
-                        <option value="">Search or select employee...</option>
+                    <select required class="user_select w-full" multiple="multiple" name="ecode[]">
                         <?php foreach ($employees as $emp): ?>
                             <option value="<?= htmlspecialchars($emp['ECODE']) ?>" <?= chosen('ecode', $emp['ECODE']) ?>>
                                 <?= htmlspecialchars($emp['ENAME'] . ' (' . $emp['ECODE'] . ')') ?>
@@ -105,7 +120,7 @@ $employees = get_employees_list($main_conn);
                         <?php endforeach; ?>
                     </select>
                 <?php else: ?>
-                    <input type="text" name="ecode" value="<?= field('ecode') ?>" required placeholder="Enter ECODE manually (e.g. 1042)" class="w-full rounded-lg border-slate-300 border text-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" name="ecode" value="<?= field('ecode') ?>" required placeholder="Enter ECODEs manually, separated by commas (e.g. 1042, 1043)" class="w-full rounded-lg border-slate-300 border text-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <p class="text-xs text-amber-600 mt-1">Note: Could not query employee list automatically from main branch database.</p>
                 <?php endif; ?>
                 <!-- <p class="text-xs text-slate-500 mt-2">Data will be pulled from <span class="font-mono text-slate-700 font-semibold">EMP</span>, <span class="font-mono text-slate-700 font-semibold">FSTARTUP</span>, <span class="font-mono text-slate-700 font-semibold">UROLES</span>, and <span class="font-mono text-slate-700 font-semibold">URPIVS</span> tables on the main branch.</p> -->
@@ -185,8 +200,7 @@ $employees = get_employees_list($main_conn);
 <script>
     $(document).ready(function() {
         $('.user_select').select2({
-            placeholder: "Search employee",
-            allowClear: true
+            placeholder: "Search employees",
         });
         $('.branches_select').select2({
             placeholder: "Select target branches",
