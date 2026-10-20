@@ -42,7 +42,12 @@ if (isset($_GET['dept'])) {
 
     // One pass over PIPARAMV1 for every doctor: a column per doctor, same match as the
     // per-doctor query (UPPER(PIPVALUE) LIKE '%WORD%'), so a row naming two doctors counts for both.
-    $binds = [':dfrom' => $from, ':dto' => $to, ':dcode' => $dept];
+    // Dates go in as in the manual query: BETWEEN '01-SEP-26' AND '30-SEP-26' (DD-MON-YY).
+    // Both were validated as Y-m-d above, so the literals are safe to inline.
+    $fromOra = strtoupper(DateTime::createFromFormat('!Y-m-d', $from)->format('d-M-y'));
+    $toOra   = strtoupper(DateTime::createFromFormat('!Y-m-d', $to)->format('d-M-y'));
+
+    $binds = [':dcode' => $dept];
     $cols  = [];
     $anyOf = [];
     foreach ($doctors as $i => $doc) {
@@ -53,18 +58,23 @@ if (isset($_GET['dept'])) {
     if ($departments[$dept]['ipcode'] !== null) {
         $binds[':ipcode'] = $departments[$dept]['ipcode'];
     }
-    $sql = "SELECT pv1.bcode, b.bname, " . implode(', ', $cols) . "
+    $sql = "SELECT pv1.bcode, b.bname,
+                   " . implode(",
+                   ", $cols) . "
               FROM piparamv1 pv1, dwi, branches b, investigations i
              WHERE pv1.icode = dwi.icode
                AND pv1.bcode = b.bcode
                AND i.icode = dwi.icode
-               AND dwi.dcode = :dcode
-               " . ($departments[$dept]['ipcode'] !== null ? "AND pv1.ipcode = :ipcode" : "") . "
-               AND pv1.piped >= TO_DATE(:dfrom, 'YYYY-MM-DD')
-               AND pv1.piped <  TO_DATE(:dto, 'YYYY-MM-DD') + 1
+               AND dwi.dcode = :dcode" . ($departments[$dept]['ipcode'] !== null ? "
+               AND pv1.ipcode = :ipcode" : "") . "
+               AND pv1.piped BETWEEN '{$fromOra}' AND '{$toOra}'
                AND (" . implode(' OR ', $anyOf) . ")
              GROUP BY pv1.bcode, b.bname
              ORDER BY pv1.bcode";
+
+    // The query with every bind filled in, returned so it can be checked on the page.
+    $shownSql = preg_replace_callback('/:\w+/', fn($m) => array_key_exists($m[0], $binds) ? "'" . $binds[$m[0]] . "'" : $m[0], $sql);
+    $shownSql = preg_replace('/^ {12}/m', '', $shownSql);
 
     $started = microtime(true);
     $stmt = @oci_parse($conn, $sql);
@@ -74,7 +84,7 @@ if (isset($_GET['dept'])) {
     if (!$stmt || !@oci_execute($stmt)) {
         $e = oci_error($stmt ?: $conn);
         http_response_code(500);
-        echo json_encode(['error' => $e['message'] ?? 'Query failed']);
+        echo json_encode(['error' => $e['message'] ?? 'Query failed', 'sql' => $shownSql]);
         exit();
     }
 
@@ -86,7 +96,7 @@ if (isset($_GET['dept'])) {
         }
         $rows[] = ['bcode' => $r['BCODE'], 'bname' => (string) $r['BNAME'], 'counts' => $counts];
     }
-    echo json_encode(['rows' => $rows, 'seconds' => round(microtime(true) - $started, 1)]);
+    echo json_encode(['rows' => $rows, 'sql' => $shownSql, 'seconds' => round(microtime(true) - $started, 1)]);
     exit();
 }
 
@@ -131,10 +141,12 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         </div>
     </form>
 
+    <div id="queries" class="mt-8 space-y-4"></div>
     <div id="results" class="mt-8 space-y-6"></div>
 </div>
 
-<script src="../assets/js/xlsx.full.min.js"></script>
+<!-- SheetJS build that also writes cell styles (xlsx-js-style 1.2.0). -->
+<script src="../assets/js/xlsx-js-style.min.js"></script>
 <script>
     $(function() {
         const DOCTORS = <?= json_encode(array_column($doctors, 'name')) ?>;
@@ -176,6 +188,15 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             </div>`;
         }
 
+        // The exact SQL the server ran for a department, so it can be checked by hand.
+        function showQuery(dept, sql) {
+            if (!sql) return;
+            $('#queries').append(`<section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">${DEPTS[dept]} query</h2>
+                <pre class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto whitespace-pre">${esc(sql)}</pre>
+            </section>`);
+        }
+
         function render() {
             const cards = report.doctors.map((d) => `
                 <section id="doc-${d}" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -197,7 +218,7 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             });
 
             setRunning(true);
-            $('#results').empty();
+            $('#results, #queries').empty();
             const started = Date.now();
             const tick = setInterval(() => $('#status').html(SPINNER + ' Counting ' + esc(from) + ' to ' + esc(to) + ' … ' + Math.round((Date.now() - started) / 1000) + 's'), 1000);
             $('#status').html(SPINNER + ' Counting ' + esc(from) + ' to ' + esc(to) + ' …');
@@ -212,7 +233,7 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                 },
                 dataType: 'json',
                 timeout: 600000
-            }));
+            }).always((a) => showQuery(dept, (a && a.sql) || (a && a.responseJSON && a.responseJSON.sql)))); // done: (data, …), fail: (xhr, …)
             $.when(...calls)
                 .done(function(...answers) {
                     const data = {};
@@ -244,92 +265,62 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                 });
         });
 
-        // Same layout as the monthly sheet: one sheet per doctor, histopathology in A–D, cytology in F–I.
+        // Same layout and styling as the monthly HistoDRCounts sheet: one sheet per doctor,
+        // histopathology in A–D and cytology in F–I, Calibri 11, bold headings and totals,
+        // medium borders round the title, header and total, thin borders on the data.
+        const FONT = { name: 'Calibri', sz: 11 };
+        const BOLD = { ...FONT, bold: true };
+        const line = (style) => ({ style, color: { rgb: '000000' } });
+        const THIN = line('thin'), MEDIUM = line('medium');
+
+        // One department block starting at column c; returns the last row it used.
+        function writeBlock(ws, c, title, rows, doctor) {
+            const put = (r, col, cell) => { ws[XLSX.utils.encode_cell({ r, c: c + col })] = cell; };
+            const edge = (col) => ({ left: col === 0 ? MEDIUM : THIN, right: col === 3 ? MEDIUM : THIN });
+
+            for (let col = 0; col < 4; col++) {
+                put(0, col, { t: 's', v: col === 0 ? title : '', s: { font: BOLD, alignment: { horizontal: 'center' }, border: { ...edge(col), top: MEDIUM, bottom: THIN } } });
+            }
+            ['BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS'].forEach((v, col) => {
+                put(1, col, { t: 's', v, s: { font: BOLD, border: { ...edge(col), top: MEDIUM, bottom: MEDIUM } } });
+            });
+            const dataBorder = { left: THIN, right: THIN, top: THIN, bottom: THIN };
+            rows.forEach((row, i) => {
+                const r = 2 + i;
+                put(r, 0, { t: 's', v: row.bcode, z: '@', s: { font: FONT, numFmt: '@', border: dataBorder } });
+                put(r, 1, { t: 's', v: row.bname, s: { font: FONT, border: dataBorder } });
+                put(r, 2, { t: 's', v: doctor, s: { font: FONT, border: dataBorder } });
+                put(r, 3, { t: 'n', v: row.count, s: { font: FONT, border: dataBorder } });
+            });
+
+            const totalRow = 2 + rows.length;
+            const countCol = XLSX.utils.encode_col(c + 3);
+            put(totalRow, 2, { t: 's', v: 'Total', s: { font: BOLD, border: { left: MEDIUM, right: THIN, top: MEDIUM, bottom: MEDIUM } } });
+            put(totalRow, 3, {
+                t: 'n',
+                v: total(rows),
+                ...(rows.length ? { f: `SUM(${countCol}3:${countCol}${totalRow})` } : {}),
+                s: { font: BOLD, border: { left: THIN, right: MEDIUM, top: MEDIUM, bottom: MEDIUM } }
+            });
+            return totalRow;
+        }
+
         function downloadExcel() {
             const wb = XLSX.utils.book_new();
             report.doctors.forEach((d) => {
-                const aoa = [
-                    ['HISTOPATHOLOGY', null, null, null, null, 'CYTOLOGY'],
-                    ['BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS', null, 'BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS']
+                const ws = {};
+                const lastRow = Math.max(
+                    writeBlock(ws, 0, 'HISTOPATHOLOGY', rowsFor('HSP', d), DOCTORS[d]),
+                    writeBlock(ws, 5, 'CYTOLOGY', rowsFor('CYTO', d), DOCTORS[d])
+                );
+                ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: lastRow, c: 8 } });
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+                    { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } }
                 ];
-                const ws = XLSX.utils.aoa_to_sheet(aoa);
-                [
-                    ['HSP', 0],
-                    ['CYTO', 5]
-                ].forEach(([dept, c]) => {
-                    const rows = rowsFor(dept, d);
-                    XLSX.utils.sheet_add_aoa(ws, rows.map((r) => [r.bcode, r.bname, DOCTORS[d], r.count]), {
-                        origin: {
-                            r: 2,
-                            c
-                        }
-                    });
-                    const totalRow = 2 + rows.length; // 0-based row right under the data
-                    const countCol = XLSX.utils.encode_col(c + 3);
-                    ws[XLSX.utils.encode_cell({
-                        r: totalRow,
-                        c: c + 2
-                    })] = {
-                        t: 's',
-                        v: 'Total'
-                    };
-                    ws[XLSX.utils.encode_cell({
-                            r: totalRow,
-                            c: c + 3
-                        })] = rows.length ?
-                        {
-                            t: 'n',
-                            v: total(rows),
-                            f: `SUM(${countCol}3:${countCol}${totalRow})`
-                        } :
-                        {
-                            t: 'n',
-                            v: 0
-                        };
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    range.e.r = Math.max(range.e.r, totalRow);
-                    range.e.c = Math.max(range.e.c, c + 3);
-                    ws['!ref'] = XLSX.utils.encode_range(range);
-                });
-                ws['!merges'] = [{
-                    s: {
-                        r: 0,
-                        c: 0
-                    },
-                    e: {
-                        r: 0,
-                        c: 3
-                    }
-                }, {
-                    s: {
-                        r: 0,
-                        c: 5
-                    },
-                    e: {
-                        r: 0,
-                        c: 8
-                    }
-                }];
-                ws['!cols'] = [{
-                    wch: 7
-                }, {
-                    wch: 34
-                }, {
-                    wch: 26
-                }, {
-                    wch: 9
-                }, {
-                    wch: 4
-                }, {
-                    wch: 7
-                }, {
-                    wch: 34
-                }, {
-                    wch: 26
-                }, {
-                    wch: 9
-                }];
-                XLSX.utils.book_append_sheet(wb, ws, DOCTORS[d].replace(/[\\\/?*\[\]:]/g, ' ').slice(0, 31));
+                // Column widths of the reference sheet (Excel's default is about 8.43).
+                ws['!cols'] = [8.43, 31.6, 26, 8.43, 8.43, 8.43, 36.4, 26, 8.43].map((width) => ({ width }));
+                XLSX.utils.book_append_sheet(wb, ws, DOCTORS[d].replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31));
             });
             XLSX.writeFile(wb, 'HistoDRCounts(' + periodLabel(report.from, report.to) + ').xlsx');
         }
