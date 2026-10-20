@@ -127,6 +127,10 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                 <label for="to" class="block text-sm font-semibold text-slate-700 mb-1">To (inclusive) <span class="text-red-500">*</span></label>
                 <input type="date" id="to" required value="<?= $defaultTo ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
+            <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                <input type="checkbox" id="showDetails" class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                Show query and summary
+            </label>
         </div>
 
         <div class="space-y-2 pt-1">
@@ -141,8 +145,11 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         </div>
     </form>
 
-    <div id="queries" class="mt-8 space-y-4"></div>
-    <div id="results" class="mt-8 space-y-6"></div>
+    <!-- Only shown while "Show query and summary" is ticked; filled on every run either way. -->
+    <div id="details" class="hidden">
+        <div id="queries" class="mt-8 space-y-4"></div>
+        <div id="results" class="mt-8 space-y-6"></div>
+    </div>
 </div>
 
 <!-- SheetJS build that also writes cell styles (xlsx-js-style 1.2.0). -->
@@ -198,13 +205,35 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         }
 
         function render() {
+            const summary = report.doctors.map((d) => {
+                const h = total(rowsFor('HSP', d)),
+                    c = total(rowsFor('CYTO', d));
+                return `<tr class="border-t border-slate-100"><td class="px-4 py-2 font-semibold"><a href="#doc-${d}" class="hover:text-blue-600">${esc(DOCTORS[d])}</a></td><td class="px-4 py-2 text-right tabular-nums">${fmt(h)}</td><td class="px-4 py-2 text-right tabular-nums">${fmt(c)}</td><td class="px-4 py-2 text-right tabular-nums font-semibold">${fmt(h + c)}</td></tr>`;
+            }).join('');
             const cards = report.doctors.map((d) => `
                 <section id="doc-${d}" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                     <h2 class="text-base font-bold text-slate-900 mb-4">${esc(DOCTORS[d])}</h2>
                     <div class="space-y-6">${deptTable('HSP', rowsFor('HSP', d))}${deptTable('CYTO', rowsFor('CYTO', d))}</div>
                 </section>`).join('');
-            $('#results').html(cards);
+            $('#results').html(`
+                <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-900 mb-4">Summary <span class="font-normal text-sm text-slate-500">${esc(report.from)} to ${esc(report.to)}</span></h2>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="px-4 py-2 text-left">Doctor</th><th class="px-4 py-2 text-right">Histo</th><th class="px-4 py-2 text-right">Cyto</th><th class="px-4 py-2 text-right">Total</th></tr></thead>
+                            <tbody>${summary}</tbody>
+                        </table>
+                    </div>
+                </section>${cards}`);
         }
+
+        // The query and summary can be shown or hidden at any time, before or after a run.
+        const $showDetails = $('#showDetails');
+        function applyShowDetails() {
+            $('#details').toggleClass('hidden', !$showDetails.is(':checked'));
+        }
+        $showDetails.on('change', applyShowDetails);
+        applyShowDetails();
 
         $('#countsForm').on('submit', function(e) {
             e.preventDefault();
