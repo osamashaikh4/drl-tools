@@ -5,8 +5,11 @@ include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/user_functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['ECODE']) && isset($_POST['bcode'])) {
-        $targetBranches = (array)$_POST['bcode'];
+    if (isset($_POST['ECODE'])) {
+        // "All branches" is expanded here, so it always means every branch the tool knows about.
+        $targetBranches = isset($_POST['all_branches'])
+            ? array_map('strval', array_keys(get_branches_list($conn, $connections)))
+            : (array)($_POST['bcode'] ?? []);
         $formData = [
             'ECODE'          => trim($_POST['ECODE']),
             'ENAME'          => trim($_POST['ENAME'] ?? ''),
@@ -34,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formData['USER_TYPE']    = $provisioning['user_type'] ?? 'LAB';
         $formData['LAB_TEMPLATE'] = $provisioning['lab_template'] ?? '';
 
-        if (empty($formData['ECODE']) || empty($formData['EDCODE']) || empty($formData['DCODE'])) {
-            $errorMsg = "ECODE, EDCODE (Designation), and DCODE (Department) are required fields.";
+        if (empty($formData['ECODE']) || empty($formData['EDCODE']) || empty($formData['DCODE']) || empty($targetBranches)) {
+            $errorMsg = "ECODE, EDCODE (Designation), DCODE (Department) and at least one target branch are required.";
         } else {
             $allStatus = [];
             foreach ($targetBranches as $bcode) {
@@ -113,12 +116,20 @@ $designations = get_designations_list($conn);
                 Branch Selection
             </h2>
             <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Target Branch <span class="text-red-500">*</span></label>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-semibold text-slate-700">Target Branch <span class="text-red-500">*</span></label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                        <input type="checkbox" id="allBranches" name="all_branches" value="1" <?= isset($old['all_branches']) ? 'checked' : '' ?> class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                        All branches <span class="font-normal text-slate-500 tabular-nums">(<?= count($branches) ?>)</span>
+                    </label>
+                </div>
+                <div id="targetPicker">
                 <select required class="branches_select w-full" multiple="multiple" name="bcode[]">
                     <?php foreach ($branches as $bcode => $bname): ?>
                         <option value="<?= htmlspecialchars($bcode) ?>" <?= chosen('bcode', $bcode) ?>><?= htmlspecialchars($bcode . ' - ' . $bname) ?></option>
                     <?php endforeach; ?>
                 </select>
+                </div>
                 <!-- <p class="text-xs text-slate-500 mt-1">Select one or multiple branches where this employee will be added.</p> -->
             </div>
         </div>
@@ -316,6 +327,15 @@ $designations = get_designations_list($conn);
         $('.branches_select').select2({
             placeholder: "Select target branches",
         });
+        // "All branches": the server expands it to every branch, so the picker is set aside while it is ticked.
+        const $allBranches = $('#allBranches');
+        function applyAllBranches() {
+            const all = $allBranches.is(':checked');
+            $('.branches_select').prop('disabled', all).prop('required', !all).trigger('change.select2');
+            $('#targetPicker').toggleClass('opacity-50 pointer-events-none', all);
+        }
+        $allBranches.on('change', applyAllBranches);
+        applyAllBranches();
         $('.tag_select').select2({
             tags: true,
             placeholder: "Select",

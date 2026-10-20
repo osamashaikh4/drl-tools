@@ -53,7 +53,10 @@ function get_branches_list($conn, $connections)
         $r = @oci_parse($conn, $btmt);
         if ($r && @oci_execute($r)) {
             while ($row = oci_fetch_array($r, OCI_ASSOC + OCI_RETURN_NULLS)) {
-                $branches[$row['BCODE']] = $row['BNAME'];
+                // Only branches the tool can actually connect to (see conn.php).
+                if (isset($connections[$row['BCODE']])) {
+                    $branches[$row['BCODE']] = $row['BNAME'];
+                }
             }
         }
     }
