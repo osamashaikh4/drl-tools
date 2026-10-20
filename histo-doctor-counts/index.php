@@ -98,7 +98,7 @@ $defaultFrom = date('Y-m-01', strtotime('first day of last month'));
 $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
 ?>
 
-<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<div class="max-w-xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
         <a href="../index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
             ← Back to Dashboard
@@ -119,17 +119,15 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <p id="status" class="text-xs text-slate-500 tabular-nums"></p>
-            <div class="flex gap-3">
-                <button id="runButton" type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-                    <span id="runSpinner" class="spinner hidden" aria-hidden="true"></span>
-                    <svg id="runIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span id="runLabel">Download Excel</span>
-                </button>
-            </div>
+        <div class="space-y-2 pt-1">
+            <button id="runButton" type="submit" class="w-full px-6 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="runSpinner" class="spinner hidden" aria-hidden="true"></span>
+                <svg id="runIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span id="runLabel">Download Excel</span>
+            </button>
+            <p id="status" class="text-xs text-slate-500 text-center tabular-nums min-h-4"></p>
         </div>
     </form>
 
