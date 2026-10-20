@@ -47,6 +47,7 @@ try {
                     $last = $_.LastReplicationTime.ToString('yyyy-MM-dd HH:mm:ss')
                 }
                 [pscustomobject]@{
+                    Id                  = $_.Name
                     VMName              = $_.ElementName
                     State               = & $name $STATES $_.ReplicationState
                     Health              = & $name $HEALTH $_.ReplicationHealth
