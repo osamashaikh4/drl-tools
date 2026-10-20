@@ -100,7 +100,7 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
 
 <div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
-        <a href="../index.php" class="text-xs font-semibold text-slate-500 hover:text-fuchsia-600 flex items-center gap-1 mb-2">
+        <a href="../index.php" class="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2">
             ← Back to Dashboard
         </a>
         <h1 class="text-2xl font-bold text-slate-900">Histo Doctor Counts</h1>
@@ -108,37 +108,27 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
     </div>
 
     <form id="countsForm" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="space-y-5">
             <div>
                 <label for="from" class="block text-sm font-semibold text-slate-700 mb-1">From <span class="text-red-500">*</span></label>
-                <input type="date" id="from" required value="<?= $defaultFrom ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500">
+                <input type="date" id="from" required value="<?= $defaultFrom ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
                 <label for="to" class="block text-sm font-semibold text-slate-700 mb-1">To (inclusive) <span class="text-red-500">*</span></label>
-                <input type="date" id="to" required value="<?= $defaultTo ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500">
-            </div>
-        </div>
-
-        <div>
-            <p class="text-sm font-semibold text-slate-700 mb-2">Doctors</p>
-            <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <?php foreach ($doctors as $i => $doc): ?>
-                    <label class="inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700">
-                        <input type="checkbox" class="doctor w-4 h-4 rounded text-fuchsia-600 border-slate-300 focus:ring-fuchsia-500" value="<?= $i ?>" checked>
-                        <?= htmlspecialchars($doc['name']) ?>
-                    </label>
-                <?php endforeach; ?>
+                <input type="date" id="to" required value="<?= $defaultTo ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <p id="status" class="text-xs text-slate-500 tabular-nums">Each department scans PIPARAMV1 once for the period; a month takes about a minute.</p>
+            <p id="status" class="text-xs text-slate-500 tabular-nums"></p>
             <div class="flex gap-3">
                 <button id="downloadButton" type="button" disabled class="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
                     Download Excel
                 </button>
-                <button id="runButton" type="submit" class="px-6 py-2.5 rounded-xl bg-fuchsia-600 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:bg-fuchsia-500 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <button id="runButton" type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                     <span id="runSpinner" class="spinner hidden" aria-hidden="true"></span>
                     <span id="runLabel">Get Counts</span>
                 </button>
@@ -167,13 +157,17 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         }
 
         // Rows of one department for one doctor: only branches where the doctor has reports.
-        const rowsFor = (dept, d) => report.data[dept].filter((r) => r.counts[d] > 0).map((r) => ({ bcode: r.bcode, bname: r.bname, count: r.counts[d] }));
+        const rowsFor = (dept, d) => report.data[dept].filter((r) => r.counts[d] > 0).map((r) => ({
+            bcode: r.bcode,
+            bname: r.bname,
+            count: r.counts[d]
+        }));
         const total = (rows) => rows.reduce((s, r) => s + r.count, 0);
 
         function deptTable(dept, rows) {
-            const body = rows.length
-                ? rows.map((r) => `<tr class="border-t border-slate-100"><td class="px-3 py-1.5 font-mono text-slate-500">${esc(r.bcode)}</td><td class="px-3 py-1.5">${esc(r.bname)}</td><td class="px-3 py-1.5 text-right tabular-nums">${fmt(r.count)}</td></tr>`).join('')
-                : `<tr><td colspan="3" class="px-3 py-4 text-center text-slate-400">No reports</td></tr>`;
+            const body = rows.length ?
+                rows.map((r) => `<tr class="border-t border-slate-100"><td class="px-3 py-1.5 font-mono text-slate-500">${esc(r.bcode)}</td><td class="px-3 py-1.5">${esc(r.bname)}</td><td class="px-3 py-1.5 text-right tabular-nums">${fmt(r.count)}</td></tr>`).join('') :
+                `<tr><td colspan="3" class="px-3 py-4 text-center text-slate-400">No reports</td></tr>`;
             return `<div class="min-w-0">
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">${DEPTS[dept]}</h3>
                 <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -188,13 +182,14 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
 
         function render() {
             const summary = report.doctors.map((d) => {
-                const h = total(rowsFor('HSP', d)), c = total(rowsFor('CYTO', d));
-                return `<tr class="border-t border-slate-100"><td class="px-4 py-2 font-semibold"><a href="#doc-${d}" class="hover:text-fuchsia-600">${esc(DOCTORS[d])}</a></td><td class="px-4 py-2 text-right tabular-nums">${fmt(h)}</td><td class="px-4 py-2 text-right tabular-nums">${fmt(c)}</td><td class="px-4 py-2 text-right tabular-nums font-semibold">${fmt(h + c)}</td></tr>`;
+                const h = total(rowsFor('HSP', d)),
+                    c = total(rowsFor('CYTO', d));
+                return `<tr class="border-t border-slate-100"><td class="px-4 py-2 font-semibold"><a href="#doc-${d}" class="hover:text-blue-600">${esc(DOCTORS[d])}</a></td><td class="px-4 py-2 text-right tabular-nums">${fmt(h)}</td><td class="px-4 py-2 text-right tabular-nums">${fmt(c)}</td><td class="px-4 py-2 text-right tabular-nums font-semibold">${fmt(h + c)}</td></tr>`;
             }).join('');
             const cards = report.doctors.map((d) => `
                 <section id="doc-${d}" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm scroll-mt-4">
                     <h2 class="text-base font-bold text-slate-900 mb-4">${esc(DOCTORS[d])}</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">${deptTable('HSP', rowsFor('HSP', d))}${deptTable('CYTO', rowsFor('CYTO', d))}</div>
+                    <div class="space-y-6">${deptTable('HSP', rowsFor('HSP', d))}${deptTable('CYTO', rowsFor('CYTO', d))}</div>
                 </section>`).join('');
             $('#results').html(`
                 <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -210,10 +205,14 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
 
         $('#countsForm').on('submit', function(e) {
             e.preventDefault();
-            const from = $('#from').val(), to = $('#to').val();
-            const doctors = $('.doctor:checked').map((_, el) => +el.value).get();
-            if (!from || !to || from > to) return iziToast.warning({ title: 'Dates', message: 'Pick a From date on or before the To date', position: 'topRight' });
-            if (!doctors.length) return iziToast.warning({ title: 'Doctors', message: 'Tick at least one doctor', position: 'topRight' });
+            const from = $('#from').val(),
+                to = $('#to').val();
+            const doctors = DOCTORS.map((_, i) => i);
+            if (!from || !to || from > to) return iziToast.warning({
+                title: 'Dates',
+                message: 'Pick a From date on or before the To date',
+                position: 'topRight'
+            });
 
             setRunning(true);
             $('#downloadButton').prop('disabled', true);
@@ -223,12 +222,28 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             $('#status').html(SPINNER + ' Counting ' + esc(from) + ' to ' + esc(to) + ' …');
 
             // Both departments run in parallel on the server.
-            const calls = Object.keys(DEPTS).map((dept) => $.ajax({ url: 'index.php', data: { dept, from, to }, dataType: 'json', timeout: 600000 }));
+            const calls = Object.keys(DEPTS).map((dept) => $.ajax({
+                url: 'index.php',
+                data: {
+                    dept,
+                    from,
+                    to
+                },
+                dataType: 'json',
+                timeout: 600000
+            }));
             $.when(...calls)
                 .done(function(...answers) {
                     const data = {};
-                    Object.keys(DEPTS).forEach((dept, i) => { data[dept] = answers[i][0].rows; });
-                    report = { from, to, doctors, data };
+                    Object.keys(DEPTS).forEach((dept, i) => {
+                        data[dept] = answers[i][0].rows;
+                    });
+                    report = {
+                        from,
+                        to,
+                        doctors,
+                        data
+                    };
                     render();
                     $('#downloadButton').prop('disabled', false);
                     $('#status').text('Done in ' + Math.round((Date.now() - started) / 1000) + 's.');
@@ -236,9 +251,16 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
                 .fail(function(xhr) {
                     const msg = (xhr.responseJSON && xhr.responseJSON.error) || (xhr.statusText === 'timeout' ? 'The query timed out' : 'The query failed');
                     $('#status').empty().append($('<span class="text-red-600">').text(msg));
-                    iziToast.error({ title: 'Failed', message: msg, position: 'topRight' });
+                    iziToast.error({
+                        title: 'Failed',
+                        message: msg,
+                        position: 'topRight'
+                    });
                 })
-                .always(function() { clearInterval(tick); setRunning(false); });
+                .always(function() {
+                    clearInterval(tick);
+                    setRunning(false);
+                });
         });
 
         // Same layout as the monthly sheet: one sheet per doctor, histopathology in A–D, cytology in F–I.
@@ -246,24 +268,87 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
             if (!report) return;
             const wb = XLSX.utils.book_new();
             report.doctors.forEach((d) => {
-                const aoa = [['HISTOPATHOLOGY', null, null, null, null, 'CYTOLOGY'], ['BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS', null, 'BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS']];
+                const aoa = [
+                    ['HISTOPATHOLOGY', null, null, null, null, 'CYTOLOGY'],
+                    ['BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS', null, 'BCODE', 'BRANCH NAME', 'DOCTOR', 'COUNTS']
+                ];
                 const ws = XLSX.utils.aoa_to_sheet(aoa);
-                [['HSP', 0], ['CYTO', 5]].forEach(([dept, c]) => {
+                [
+                    ['HSP', 0],
+                    ['CYTO', 5]
+                ].forEach(([dept, c]) => {
                     const rows = rowsFor(dept, d);
-                    XLSX.utils.sheet_add_aoa(ws, rows.map((r) => [r.bcode, r.bname, DOCTORS[d], r.count]), { origin: { r: 2, c } });
+                    XLSX.utils.sheet_add_aoa(ws, rows.map((r) => [r.bcode, r.bname, DOCTORS[d], r.count]), {
+                        origin: {
+                            r: 2,
+                            c
+                        }
+                    });
                     const totalRow = 2 + rows.length; // 0-based row right under the data
                     const countCol = XLSX.utils.encode_col(c + 3);
-                    ws[XLSX.utils.encode_cell({ r: totalRow, c: c + 2 })] = { t: 's', v: 'Total' };
-                    ws[XLSX.utils.encode_cell({ r: totalRow, c: c + 3 })] = rows.length
-                        ? { t: 'n', v: total(rows), f: `SUM(${countCol}3:${countCol}${totalRow})` }
-                        : { t: 'n', v: 0 };
+                    ws[XLSX.utils.encode_cell({
+                        r: totalRow,
+                        c: c + 2
+                    })] = {
+                        t: 's',
+                        v: 'Total'
+                    };
+                    ws[XLSX.utils.encode_cell({
+                            r: totalRow,
+                            c: c + 3
+                        })] = rows.length ?
+                        {
+                            t: 'n',
+                            v: total(rows),
+                            f: `SUM(${countCol}3:${countCol}${totalRow})`
+                        } :
+                        {
+                            t: 'n',
+                            v: 0
+                        };
                     const range = XLSX.utils.decode_range(ws['!ref']);
                     range.e.r = Math.max(range.e.r, totalRow);
                     range.e.c = Math.max(range.e.c, c + 3);
                     ws['!ref'] = XLSX.utils.encode_range(range);
                 });
-                ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } }];
-                ws['!cols'] = [{ wch: 7 }, { wch: 34 }, { wch: 26 }, { wch: 9 }, { wch: 4 }, { wch: 7 }, { wch: 34 }, { wch: 26 }, { wch: 9 }];
+                ws['!merges'] = [{
+                    s: {
+                        r: 0,
+                        c: 0
+                    },
+                    e: {
+                        r: 0,
+                        c: 3
+                    }
+                }, {
+                    s: {
+                        r: 0,
+                        c: 5
+                    },
+                    e: {
+                        r: 0,
+                        c: 8
+                    }
+                }];
+                ws['!cols'] = [{
+                    wch: 7
+                }, {
+                    wch: 34
+                }, {
+                    wch: 26
+                }, {
+                    wch: 9
+                }, {
+                    wch: 4
+                }, {
+                    wch: 7
+                }, {
+                    wch: 34
+                }, {
+                    wch: 26
+                }, {
+                    wch: 9
+                }];
                 XLSX.utils.book_append_sheet(wb, ws, DOCTORS[d].replace(/[\\\/?*\[\]:]/g, ' ').slice(0, 31));
             });
             XLSX.writeFile(wb, 'HistoDRCounts(' + periodLabel(report.from, report.to) + ').xlsx');
