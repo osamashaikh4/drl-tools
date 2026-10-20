@@ -177,26 +177,12 @@ $defaultTo   = date('Y-m-t', strtotime('first day of last month'));
         }
 
         function render() {
-            const summary = report.doctors.map((d) => {
-                const h = total(rowsFor('HSP', d)),
-                    c = total(rowsFor('CYTO', d));
-                return `<tr class="border-t border-slate-100"><td class="px-4 py-2 font-semibold"><a href="#doc-${d}" class="hover:text-blue-600">${esc(DOCTORS[d])}</a></td><td class="px-4 py-2 text-right tabular-nums">${fmt(h)}</td><td class="px-4 py-2 text-right tabular-nums">${fmt(c)}</td><td class="px-4 py-2 text-right tabular-nums font-semibold">${fmt(h + c)}</td></tr>`;
-            }).join('');
             const cards = report.doctors.map((d) => `
-                <section id="doc-${d}" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm scroll-mt-4">
+                <section id="doc-${d}" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                     <h2 class="text-base font-bold text-slate-900 mb-4">${esc(DOCTORS[d])}</h2>
                     <div class="space-y-6">${deptTable('HSP', rowsFor('HSP', d))}${deptTable('CYTO', rowsFor('CYTO', d))}</div>
                 </section>`).join('');
-            $('#results').html(`
-                <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                    <h2 class="text-base font-bold text-slate-900 mb-4">Summary <span class="font-normal text-sm text-slate-500">${esc(report.from)} to ${esc(report.to)}</span></h2>
-                    <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="px-4 py-2 text-left">Doctor</th><th class="px-4 py-2 text-right">Histopathology</th><th class="px-4 py-2 text-right">Cytology</th><th class="px-4 py-2 text-right">Total</th></tr></thead>
-                            <tbody>${summary}</tbody>
-                        </table>
-                    </div>
-                </section>${cards}`);
+            $('#results').html(cards);
         }
 
         $('#countsForm').on('submit', function(e) {
