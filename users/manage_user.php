@@ -8,12 +8,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['ecode']) && isset($_POST['bcode'])) {
         $ecode       = trim($_POST['ecode']);
         $bcode       = trim($_POST['bcode']);
-        $action      = isset($_POST['do_unlock']) ? 'unlock' : 'reset';
+        $action      = isset($_POST['do_both']) ? 'both' : (isset($_POST['do_unlock']) ? 'unlock' : 'reset');
         $newPassword = trim($_POST['new_password'] ?? '');
 
         if (empty($ecode) || empty($bcode) || !isset($connections[$bcode])) {
             $errorMsg = "Please select both a branch and a user.";
-        } elseif ($action === 'reset' && empty($newPassword)) {
+        } elseif ($action !== 'unlock' && empty($newPassword)) {
             $errorMsg = "Please enter a new password to reset.";
         } else {
             $allStatus = [];
@@ -30,8 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($action === 'unlock') {
                 $res = unlock_user_account($adminConn, $bcode, $ecode);
-            } else {
+            } elseif ($action === 'reset') {
                 $res = reset_user_password($adminConn, $bcode, $ecode, $newPassword);
+            } else {
+                $res = array_merge(
+                    unlock_user_account($adminConn, $bcode, $ecode),
+                    reset_user_password($adminConn, $bcode, $ecode, $newPassword)
+                );
             }
             $allStatus = array_merge($allStatus, $res);
 
@@ -62,7 +67,7 @@ $branches  = get_branches_list($conn, $connections);
                 ← Back to Dashboard
             </a>
             <h1 class="text-2xl font-bold text-slate-900">Manage User Account</h1>
-            <p class="text-sm text-slate-500">Reset a database password or unlock a locked account on a branch.</p>
+            <p class="text-sm text-slate-500">Reset a database password, unlock a locked account, or do both at once on a branch.</p>
         </div>
     </div>
 
@@ -114,13 +119,13 @@ $branches  = get_branches_list($conn, $connections);
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">New Password</label>
-                <input type="password" id="newPassword" name="new_password" placeholder="Only required to reset password" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                <input type="password" id="newPassword" name="new_password" placeholder="Required to reset password (not for unlock only)" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                 <p id="passwordHint" class="hidden text-xs text-red-600 mt-1.5">Enter a new password to reset.</p>
                 <!-- <p class="text-xs text-slate-500 mt-1.5">Runs <span class="font-mono text-slate-700">ALTER USER &lt;ECODE&gt; IDENTIFIED BY &lt;password&gt;</span> on each selected branch.</p> -->
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-4 pt-4">
+        <div class="flex flex-wrap items-center justify-end gap-4 pt-4">
             <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancel
             </a>
@@ -137,6 +142,13 @@ $branches  = get_branches_list($conn, $connections);
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
                 <span class="btn-label">Reset Password</span>
+            </button>
+            <button type="submit" name="do_both" value="1" data-busy="Unlocking & resetting…" class="action-btn px-8 py-3 rounded-xl bg-rose-600 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 hover:bg-rose-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span class="btn-spinner spinner hidden" aria-hidden="true"></span>
+                <svg class="btn-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span class="btn-label">Unlock &amp; Reset</span>
             </button>
         </div>
     </form>
@@ -230,7 +242,7 @@ $branches  = get_branches_list($conn, $connections);
             if (!button || button.disabled) return e.preventDefault();
 
             // Reset needs a password: say so here instead of a round trip to the server.
-            if (button.name === 'do_reset' && !password.value.trim()) {
+            if (button.name !== 'do_unlock' && !password.value.trim()) {
                 e.preventDefault();
                 passwordHint.classList.remove('hidden');
                 password.focus();
