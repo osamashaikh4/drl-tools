@@ -55,6 +55,9 @@ function user_can(string $tool): bool
         return false;
     }
     $tools = $USERS[$user]['tools'];
+    if (in_array($tool, (array) ($USERS[$user]['except'] ?? []), true)) {
+        return false;
+    }
 
     return $tools === '*' || in_array($tool, (array) $tools, true);
 }
@@ -87,7 +90,7 @@ function require_login(): void
 // stopped at the door of the others: their pages and their background (JSON) requests alike.
 // Anything that is not a known tool is closed to limited accounts, except the shared root pages.
 $ALL_TOOLS = $TOOLS;
-if (($user = current_user()) !== null && $USERS[$user]['tools'] !== '*') {
+if (($user = current_user()) !== null && ($USERS[$user]['tools'] !== '*' || !empty($USERS[$user]['except']))) {
     $key    = current_tool_key();
     $shared = current_tool() === null && in_array(basename($_SERVER['SCRIPT_NAME'] ?? ''), ['index.php', 'login.php', 'logout.php'], true);
     if (!$shared && ($key === null || !user_can($key))) {
