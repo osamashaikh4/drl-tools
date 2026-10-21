@@ -9,3 +9,5 @@ router-tracker/data/*
 activity/data/*
 !activity/data/.htaccess
 activity/models/*.onnx
+zk-time/data/*
+!zk-time/data/.htaccess

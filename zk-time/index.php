@@ -29,7 +29,7 @@ if (isset($_GET['api'])) {
     }
     $ip     = $devices[$key]['ip'];
     $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
-    $writes = ['settime', 'saveuser', 'deluser', 'danger'];
+    $writes = ['settime', 'saveuser', 'deluser', 'addpunch', 'editpunch', 'delpunch', 'danger'];
     if (in_array($api, $writes, true) !== $isPost) {
         $reply(['ok' => false, 'error' => 'Wrong request method'], 405);
     }
@@ -106,7 +106,7 @@ if (isset($_GET['api'])) {
             $q    = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
             $type = ($_GET['type'] ?? '') === '' ? null : (int) $_GET['type'];
             $rows = [];
-            foreach ($data['records'] as [$time, $userid, $punch]) {
+            foreach ($data['records'] as [$time, $userid, $punch, $verify]) {
                 if ($time < $from || $time > $to || ($type !== null && $punch !== $type)) {
                     continue;
                 }
@@ -114,7 +114,8 @@ if (isset($_GET['api'])) {
                 if ($q !== '' && mb_strpos(mb_strtolower($userid . ' ' . $name), $q) === false) {
                     continue;
                 }
-                $rows[] = [$time, $userid, $name, ZK_PUNCH[$punch] ?? ('Type ' . $punch)];
+                // The last two (punch and verify codes) let the page pick this exact record to edit or delete.
+                $rows[] = [$time, $userid, $name, ZK_PUNCH[$punch] ?? ('Type ' . $punch), $punch, $verify];
             }
             // Newest first.
             usort($rows, fn($a, $b) => strcmp($b[0], $a[0]));
@@ -199,6 +200,47 @@ if (isset($_GET['api'])) {
                 return $ok;
             });
             $reply(['ok' => $ok, 'error' => $ok ? null : 'The device did not remove the user']);
+
+        // Add a punch (e.g. a missed one) to the machine's own attendance log. dry=1 only checks.
+        // Succeeds only when a fresh read of the log shows the exact record.
+        case 'addpunch':
+            $p = zk_punch_input($_POST);
+            if (is_string($p)) {
+                $reply(['ok' => false, 'error' => $p]);
+            }
+            $dry = !empty($_POST['dry']);
+            $res = zk_add_punch(fn() => zk_open($ip), $p, $dry);
+            if (!$dry) {
+                zk_forget_attendance($ip);
+            }
+            zk_log_punch(['by' => current_user(), 'device' => $key, 'ip' => $ip, 'dry' => $dry] + $p + ['result' => $res]);
+            $reply($res);
+
+        // Change or delete a punch on the machine. The record is sent as it was listed (o_* fields).
+        // Each reads the whole log several times, so a big log takes minutes.
+        case 'editpunch':
+        case 'delpunch':
+            set_time_limit(900);
+            $old = zk_record_input(['time' => $_POST['o_time'] ?? '', 'userid' => $_POST['o_userid'] ?? '', 'punch' => $_POST['o_punch'] ?? '', 'verify' => $_POST['o_verify'] ?? '']);
+            if (is_string($old)) {
+                $reply(['ok' => false, 'error' => $old]);
+            }
+            $dry = !empty($_POST['dry']);
+            if ($api === 'delpunch') {
+                $new = null;
+                $res = zk_delete_punch(fn() => zk_open($ip), $old, $dry);
+            } else {
+                $new = zk_punch_input(['userid' => $old[1]] + $_POST);
+                if (is_string($new)) {
+                    $reply(['ok' => false, 'error' => $new]);
+                }
+                $res = zk_edit_punch(fn() => zk_open($ip), $old, $new, $dry);
+            }
+            if (!$dry) {
+                zk_forget_attendance($ip);
+            }
+            zk_log_punch(['by' => current_user(), 'device' => $key, 'ip' => $ip, 'action' => $api, 'dry' => $dry, 'old' => $old, 'new' => $new, 'result' => $res]);
+            $reply($res);
 
         // Destructive / maintenance actions. The page makes the operator type the device key first.
         case 'danger':
@@ -321,10 +363,37 @@ include __DIR__ . '/../header.php';
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <p id="attInfo" class="text-xs text-slate-500 tabular-nums"></p>
                 <div class="flex gap-2">
+                    <button type="button" id="addPunch" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100">Add punch</button>
                     <button type="button" id="attRefresh" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60">Download again from device</button>
                     <button type="button" id="attExport" disabled class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50">Export Excel</button>
                 </div>
             </div>
+            <form id="punchForm" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-4">
+                <h3 id="punchFormTitle" class="text-sm font-bold text-slate-900 mb-4">Add a punch to the device's attendance log</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <label class="text-xs font-semibold text-slate-600">User ID <input name="userid" required maxlength="9" pattern="\d{1,9}" list="punchUsers" class="mt-1 w-full rounded-lg border border-slate-300 text-sm p-2 font-mono"></label>
+                    <datalist id="punchUsers"></datalist>
+                    <label class="text-xs font-semibold text-slate-600 lg:col-span-2">Date and time <input name="time" type="datetime-local" step="1" required class="mt-1 w-full rounded-lg border border-slate-300 text-sm p-2"></label>
+                    <label class="text-xs font-semibold text-slate-600">Punch
+                        <select name="punch" class="mt-1 w-full rounded-lg border border-slate-300 text-sm p-2 bg-white">
+                            <?php foreach (ZK_PUNCH as $t => $label): ?><option value="<?= $t ?>"><?= $label ?></option><?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold text-slate-600">Verified by
+                        <select name="verify" class="mt-1 w-full rounded-lg border border-slate-300 text-sm p-2 bg-white">
+                            <?php foreach (ZK_VERIFY as $v => $label): ?><option value="<?= $v ?>"><?= $label ?></option><?php endforeach; ?>
+                        </select>
+                    </label>
+                </div>
+                <p id="punchUser" class="text-xs text-slate-700 mt-3 min-h-[1rem]"></p>
+                <p class="text-xs text-slate-500 mt-1">The punch is written into the machine itself, then the log is read again to confirm it is there. A second punch for the same person at the same second is refused. Editing deletes the old punch and adds the new one (the old one is put back if that fails).</p>
+                <p id="punchResult" class="text-xs mt-3"></p>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" id="cancelPunch" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="button" id="checkPunch" class="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60">Check (dry run)</button>
+                    <button type="submit" id="savePunch" class="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-700 text-sm font-semibold text-white disabled:opacity-60">Add to device</button>
+                </div>
+            </form>
             <div id="attBody" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto text-sm"></div>
         </section>
 
@@ -385,7 +454,7 @@ include __DIR__ . '/../header.php';
             $('#panel').removeClass('hidden');
             users = []; attRows = [];
             $('#usersBody, #attBody').empty(); $('#attInfo').text(''); $('#attExport').prop('disabled', true);
-            $('#userForm').addClass('hidden');
+            $('#userForm, #punchForm').addClass('hidden');
             loadOverview();
             showSection($('.section-tab.border-slate-900').data('s') || 'overview');
         }
@@ -570,19 +639,23 @@ include __DIR__ . '/../header.php';
         function renderAttendance() {
             const TYPE = { 'Check-in': 'text-emerald-700', 'Check-out': 'text-blue-700' };
             $('#attBody').html(`<table class="w-full">
-                <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="px-4 py-2 text-left">Time</th><th class="px-4 py-2 text-left">User ID</th><th class="px-4 py-2 text-left">Name</th><th class="px-4 py-2 text-left">Punch</th></tr></thead>
-                <tbody>${attRows.slice(0, SHOW).map((a) => `<tr class="border-t border-slate-100">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="px-4 py-2 text-left">Time</th><th class="px-4 py-2 text-left">User ID</th><th class="px-4 py-2 text-left">Name</th><th class="px-4 py-2 text-left">Punch</th><th class="px-4 py-2"></th></tr></thead>
+                <tbody>${attRows.slice(0, SHOW).map((a, i) => `<tr class="border-t border-slate-100">
                     <td class="px-4 py-1.5 tabular-nums whitespace-nowrap">${esc(a[0])}</td><td class="px-4 py-1.5 font-mono">${esc(a[1])}</td>
-                    <td class="px-4 py-1.5">${esc(a[2] || '—')}</td><td class="px-4 py-1.5 ${TYPE[a[3]] || 'text-slate-600'}">${esc(a[3])}</td></tr>`).join('')
-                    || '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No punches in this range</td></tr>'}</tbody>
-                ${attRows.length > SHOW ? `<tfoot><tr><td colspan="4" class="px-4 py-2 text-xs text-slate-500 border-t border-slate-100">Showing the newest ${fmt(SHOW)} of ${fmt(attRows.length)}; Export Excel has them all.</td></tr></tfoot>` : ''}
+                    <td class="px-4 py-1.5">${esc(a[2] || '—')}</td><td class="px-4 py-1.5 ${TYPE[a[3]] || 'text-slate-600'}">${esc(a[3])}</td>
+                    <td class="px-4 py-1.5 text-right whitespace-nowrap">
+                        <button type="button" class="edit-punch text-xs font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2" data-i="${i}">Edit</button>
+                        <button type="button" class="del-punch ml-3 text-xs font-semibold text-red-700 hover:text-red-500 underline underline-offset-2" data-i="${i}">Delete</button>
+                    </td></tr>`).join('')
+                    || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No punches in this range</td></tr>'}</tbody>
+                ${attRows.length > SHOW ? `<tfoot><tr><td colspan="5" class="px-4 py-2 text-xs text-slate-500 border-t border-slate-100">Showing the newest ${fmt(SHOW)} of ${fmt(attRows.length)}; Export Excel has them all.</td></tr></tfoot>` : ''}
             </table>`);
         }
         $af.on('submit', (e) => { e.preventDefault(); loadAttendance(false); });
         $('#attRefresh').on('click', () => loadAttendance(true));
         $('#attExport').on('click', function() {
             const head = ['Time', 'User ID', 'Name', 'Punch'];
-            const ws = XLSX.utils.aoa_to_sheet([head, ...attRows]);
+            const ws = XLSX.utils.aoa_to_sheet([head, ...attRows.map((a) => a.slice(0, 4))]);
             head.forEach((_, c) => { const cell = ws[XLSX.utils.encode_cell({ r: 0, c })]; cell.s = { font: { bold: true } }; });
             ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 28 }, { wch: 14 }];
             const wb = XLSX.utils.book_new();
@@ -590,6 +663,67 @@ include __DIR__ . '/../header.php';
             const p = Object.fromEntries(new FormData($af[0]));
             XLSX.writeFile(wb, `Attendance-${current}-${p.from || 'all'}_${p.to || 'all'}.xlsx`);
         });
+
+        // ---- Add punch ---------------------------------------------------------------------------
+        const PUNCH = <?= json_encode(ZK_PUNCH) ?>, VERIFY = <?= json_encode(ZK_VERIFY) ?>;
+        const $pf = $('#punchForm');
+        const punchUsers = () => $('#punchUsers').html(users.map((u) => `<option value="${esc(u.userid)}">${esc(u.name)}</option>`).join(''));
+        function punchUserName() {
+            const id = $pf.find('[name=userid]').val().trim(), u = users.find((x) => x.userid === id);
+            $('#punchUser').html(!id ? '' : u ? esc(u.name) : '<span class="text-red-600">Not a user on this device</span>');
+        }
+        let editing = null; // attendance row being edited, or null when adding
+        const recordFields = (a) => ({ o_time: a[0], o_userid: a[1], o_punch: a[4], o_verify: a[5] });
+        function openPunchForm(a) {
+            editing = a;
+            $pf[0].reset(); $('#punchResult, #punchUser').empty(); $pf.removeClass('hidden');
+            $('#punchFormTitle').text(a ? `Edit ${a[3]} of ${a[2] || 'user ID ' + a[1]} at ${a[0]}` : "Add a punch to the device's attendance log");
+            $('#savePunch').text(a ? 'Save changes' : 'Add to device');
+            $pf.find('[name=userid]').val(a ? a[1] : '').prop('readOnly', !!a);
+            if (a) { $pf.find('[name=time]').val(a[0].replace(' ', 'T')); $pf.find('[name=punch]').val(a[4]); $pf.find('[name=verify]').val(a[5]); }
+            if (users.length) { punchUsers(); punchUserName(); }
+            else api('users').done((r) => { if (r.ok) { users = r.users; punchUsers(); punchUserName(); } });
+            $pf.find(a ? '[name=time]' : '[name=userid]').trigger('focus');
+        }
+        $('#addPunch').on('click', () => openPunchForm(null));
+        $(document).on('click', '.edit-punch', function() { openPunchForm(attRows[+$(this).data('i')]); });
+        $('#cancelPunch').on('click', () => $pf.addClass('hidden'));
+        $pf.find('[name=userid]').on('input', punchUserName);
+        function sendPunch(dry) {
+            if (!$pf[0].reportValidity()) return;
+            const data = Object.fromEntries(new FormData($pf[0]));
+            const what = `${PUNCH[data.punch]} for user ID ${data.userid} at ${data.time.replace('T', ' ')}`;
+            if (!dry && !confirm(editing
+                ? `Change ${editing[3]} at ${editing[0]} to ${what} on ${DEVICES[current].name}?`
+                : `Write ${what} into ${DEVICES[current].name}'s attendance log?`)) return;
+            const $btns = $pf.find('button').prop('disabled', true);
+            $('#punchResult').html(SPINNER + (dry ? ' Checking against the device log…' : ' Writing, then reading the log again to confirm (a large log takes minutes)…'));
+            if (editing) Object.assign(data, recordFields(editing));
+            api(editing ? 'editpunch' : 'addpunch', Object.assign(data, dry ? { dry: 1 } : {}), 'POST').done((r) => {
+                if (!r.ok) {
+                    $('#punchResult').html('<span class="text-red-600">' + esc(r.error) + '</span>');
+                    if (!dry && (r.written || r.changed || r.step)) loadAttendance(true);
+                    return toast(false, r.error);
+                }
+                if (r.dryRun) return $('#punchResult').html(`<span class="text-emerald-700">Check passed: ${esc(what)} (${esc(VERIFY[data.verify])}) can be ${editing ? 'saved' : 'added'}. Nothing was written.</span>`);
+                $('#punchResult').html(`<span class="text-emerald-700">${editing ? 'Changed' : 'Added'} and confirmed in the device log: ${esc(what)}.</span>`);
+                toast(true, editing ? 'Punch changed and confirmed on the device' : 'Punch added and confirmed on the device');
+                loadAttendance(true);
+            }).fail(() => { $('#punchResult').html('<span class="text-red-600">Request failed. Check the attendance log before trying again.</span>'); toast(false, 'Request failed'); })
+              .always(() => $btns.prop('disabled', false));
+        }
+        $(document).on('click', '.del-punch', function() {
+            const a = attRows[+$(this).data('i')], $btn = $(this);
+            if (!confirm(`Delete ${a[3]} of ${a[2] || 'user ID ' + a[1]} at ${a[0]} from ${DEVICES[current].name}?\n\nThe device can only delete a whole second, so any other punches in that second are written back afterwards and checked.`)) return;
+            $btn.prop('disabled', true).html(SPINNER + ' Deleting…');
+            api('delpunch', recordFields(a), 'POST').done((r) => {
+                toast(r.ok, r.ok ? 'Punch deleted and confirmed' + (r.rewritten ? ` (${r.rewritten} other punch(es) in that second written back)` : '') : r.error);
+                if (r.ok || r.changed) loadAttendance(true);
+            }).fail(() => toast(false, 'Request failed. Check the attendance log before trying again'))
+              .always(() => $btn.prop('disabled', false).text('Delete'));
+        });
+        $('#checkPunch').on('click', () => sendPunch(true));
+        $pf.on('submit', (e) => { e.preventDefault(); sendPunch(false); });
 
         // ---- Maintenance ----------------------------------------------------------------------
         $('.danger').on('click', function() {
