@@ -48,6 +48,13 @@ return [
         'color'       => 'violet',
         'icon'        => 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01',
     ],
+    'zk-time' => [
+        'name'        => 'ZK Devices',
+        'description' => 'ZKTeco attendance machines: clock sync, users, attendance log export and maintenance.',
+        'folder'      => 'zk-time',
+        'color'       => 'rose',
+        'icon'        => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    ],
     'network' => [
         'name'        => 'Network Status',
         'description' => 'Ping, listener and database checks for every branch server with response speed.',
