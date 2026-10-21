@@ -55,6 +55,13 @@ return [
         'color'       => 'rose',
         'icon'        => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     ],
+    'net-scan' => [
+        'name'        => 'Network Scan',
+        'description' => 'Every device on the network: IP, MAC and maker, host name, open ports, and what is new or gone.',
+        'folder'      => 'net-scan',
+        'color'       => 'cyan',
+        'icon'        => 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
+    ],
     'network' => [
         'name'        => 'Network Status',
         'description' => 'Ping, listener and database checks for every branch server with response speed.',
