@@ -18,7 +18,8 @@ if (isset($_GET['snap'])) {
         exit();
     }
     // Sub-stream (x02) is smaller and quicker; fall back to the main stream (x01).
-    foreach (['02', '01'] as $stream) {
+    // &main=1 asks for the full-resolution main stream first (the viewer uses it when zoomed in).
+    foreach (!empty($_GET['main']) ? ['01', '02'] : ['02', '01'] as $stream) {
         $r = isapi($d, 'GET', "/ISAPI/Streaming/channels/{$ch}{$stream}/picture", null, 10);
         if (!$r['error'] && str_starts_with($r['body'], "\xFF\xD8")) {
             header('Content-Type: image/jpeg');
@@ -55,7 +56,7 @@ if (isset($_GET['api'])) {
         $reply(['ok' => false, 'error' => 'Unknown device'], 400);
     }
     $api = (string) $_GET['api'];
-    if (in_array($api, ['synctime', 'reboot'], true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    if (in_array($api, ['synctime', 'reboot', 'set'], true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         $reply(['ok' => false, 'error' => 'Wrong request method'], 405);
     }
 
@@ -159,6 +160,29 @@ if (isset($_GET['api'])) {
             $r = isapi($d, 'PUT', '/ISAPI/System/time', $xml);
             $reply(['ok' => !$r['error'], 'set' => date('Y-m-d H:i:s') . ' (UTC+5)', 'error' => $r['error']]);
 
+        // Picture settings of a camera reached directly, plus its stream settings (read only).
+        case 'controls':
+            $settings = cctv_settings($d);
+            if (!array_filter($settings, fn($v) => $v !== null)) {
+                $reply(['ok' => false, 'error' => 'No camera settings on this device']);
+            }
+            $reply(['ok' => true, 'settings' => $settings, 'streams' => cctv_streams($d)]);
+
+        // Change one picture setting.
+        case 'set':
+            $err = cctv_set($d, (string) ($_POST['key'] ?? ''), trim((string) ($_POST['value'] ?? '')));
+            $reply(['ok' => $err === null, 'error' => $err]);
+
+        // Recorded clips of an NVR channel on one day.
+        case 'recordings':
+            $ch   = max(1, min(256, (int) ($_GET['ch'] ?? 1)));
+            $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['date'] ?? '')) ? $_GET['date'] : date('Y-m-d');
+            try {
+                $reply(['ok' => true, 'date' => $date, 'clips' => cctv_recordings($d, $ch, $date)]);
+            } catch (Throwable $e) {
+                $reply(['ok' => false, 'error' => $e->getMessage()]);
+            }
+
         case 'reboot':
             if (($_POST['confirm'] ?? '') !== $d['ip']) {
                 $reply(['ok' => false, 'error' => 'Confirmation did not match']);
@@ -179,7 +203,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
     <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-slate-900">CCTV</h1>
-            <p class="text-sm text-slate-500">Hikvision cameras and NVRs: snapshots, channel and disk health, clock and reboot.</p>
+            <p class="text-sm text-slate-500">Hikvision cameras and NVRs: live view with zoom, picture settings, recordings, channel and disk health, clock and reboot. Click a picture or channel to open it.</p>
         </div>
         <div class="flex gap-1 rounded-xl bg-slate-100 p-1">
             <button type="button" class="view-tab px-4 py-2 rounded-lg text-sm font-semibold" data-v="status">Status</button>
@@ -217,6 +241,43 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
     <?php endif; ?>
 </div>
 
+<!-- Viewer (cctv/viewer.js): live picture with digital zoom, picture settings, recordings -->
+<div id="viewer" class="hidden fixed inset-0 z-50 bg-slate-950/80 p-2 sm:p-6">
+    <div class="h-full max-w-7xl mx-auto bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-2 border-b border-slate-200">
+            <h2 id="vTitle" class="text-sm font-bold text-slate-900 truncate"></h2>
+            <button type="button" id="vClose" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Close ✕</button>
+        </div>
+        <div class="flex-1 min-h-0 flex flex-col lg:flex-row">
+            <div class="flex-1 min-h-0 flex flex-col bg-slate-950">
+                <div id="vStage" class="relative flex-1 min-h-[240px] overflow-hidden select-none">
+                    <img id="vImg" alt="" draggable="false" class="absolute inset-0 w-full h-full object-contain origin-top-left">
+                    <p id="vMsg" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm pointer-events-none"></p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-900 text-slate-200 text-xs">
+                    <button type="button" class="vz px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 font-bold" data-z="-1" title="Zoom out">−</button>
+                    <span id="vZoom" class="tabular-nums w-10 text-center">1×</span>
+                    <button type="button" class="vz px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 font-bold" data-z="1" title="Zoom in">+</button>
+                    <button type="button" id="vFit" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700">Fit</button>
+                    <span class="text-slate-400 hidden sm:inline">Scroll to zoom · drag to move · double-click to fit</span>
+                    <select id="vRate" class="ml-auto rounded bg-slate-800 border-0 text-xs py-1">
+                        <option value="1000">Refresh 1 s</option><option value="2000" selected>Refresh 2 s</option><option value="5000">Refresh 5 s</option><option value="0">Paused</option>
+                    </select>
+                    <a id="vSave" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700" href="#" download>Save picture</a>
+                    <button type="button" id="vFull" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700">Fullscreen</button>
+                </div>
+            </div>
+            <aside class="lg:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col min-h-0 max-h-[45vh] lg:max-h-none">
+                <div class="flex gap-1 p-2 border-b border-slate-200">
+                    <button type="button" class="vtab px-3 py-1.5 rounded-lg text-xs font-semibold" data-t="settings">Picture settings</button>
+                    <button type="button" class="vtab px-3 py-1.5 rounded-lg text-xs font-semibold" data-t="recordings">Recordings</button>
+                </div>
+                <div id="vPanel" class="flex-1 overflow-y-auto p-4 text-sm"></div>
+            </aside>
+        </div>
+    </div>
+</div>
+
 <script>
     $(function() {
         const DEVICES = <?= json_encode($devices) ?>;
@@ -224,6 +285,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
         const SPINNER = '<span class="spinner" aria-hidden="true"></span>';
         const esc = (s) => $('<span>').text(s == null ? '' : String(s)).html();
         const info = {}; // device index -> last info answer
+        window.CCTV = { DEVICES, info, esc, SPINNER, toast: (ok, message) => iziToast[ok ? 'success' : 'error']({ title: ok ? 'Done' : 'Failed', message, position: 'topRight' }) };
         const toast = (ok, message) => iziToast[ok ? 'success' : 'error']({ title: ok ? 'Done' : 'Failed', message, position: 'topRight' });
 
         const fmtBytes = (b) => { const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return (i ? b.toFixed(1) : b) + ' ' + u[i]; };
@@ -240,6 +302,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
             <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-slate-100">
                 <div><h2 class="text-base font-bold text-slate-900">${esc(d.name)}</h2><p class="text-xs font-mono text-slate-500">${esc(d.ip)}</p></div>
                 <div class="flex items-center gap-3 text-xs">
+                    <button type="button" class="open-dev font-semibold text-blue-700 hover:text-blue-500 underline underline-offset-2">Open</button>
                     <button type="button" class="sync font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2">Sync time</button>
                     <button type="button" class="reboot font-semibold text-red-700 hover:text-red-500 underline underline-offset-2">Reboot</button>
                     <button type="button" class="reload font-semibold text-slate-500 hover:text-slate-900 underline underline-offset-2">Refresh</button>
@@ -262,7 +325,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
                 const on = r.channels.filter((c) => c.online === true).length, off = r.channels.filter((c) => c.online === false).length;
                 html += `<h3 class="mt-4 mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Channels <span class="normal-case font-normal">${on} online${off ? ', <span class="text-red-700 font-semibold">' + off + ' offline</span>' : ''}</span></h3>
                     <div class="max-h-56 overflow-y-auto border border-slate-200 rounded-lg"><table class="w-full text-xs"><tbody>${r.channels.map((c) => `<tr class="border-t border-slate-100 first:border-t-0">
-                        <td class="px-2 py-1 tabular-nums text-slate-500">D${c.id}</td><td class="px-2 py-1">${dot(c.online)} <span class="ml-1 text-slate-800">${esc(c.name)}</span></td>
+                        <td class="px-2 py-1 tabular-nums text-slate-500">D${c.id}</td><td class="px-2 py-1">${dot(c.online)} <button type="button" class="open-ch ml-1 text-slate-800 hover:text-blue-700 hover:underline" data-ch="${c.id}" data-label="${esc(DEVICES[i].name + ' · D' + c.id + ' ' + c.name)}">${esc(c.name)}</button></td>
                         <td class="px-2 py-1 font-mono text-slate-500">${esc(c.ip || '')}</td>
                         <td class="px-2 py-1 ${c.online === false ? 'text-red-700' : 'text-slate-500'}">${c.online === false ? esc(c.detail || 'offline') : ''}</td>
                         <td class="px-2 py-1 text-right">${c.recording === true ? '<span class="text-emerald-700">● Recording</span>' : c.recording === false ? '<span class="text-amber-700">Not recording</span>' : ''}</td>
@@ -324,7 +387,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
                 if (!r || !r.ok) return;
                 r.channels.forEach((c) => { if (!onlineOnly || c.online !== false) tiles.push({ i, ch: c.id, label: r.recorder ? d.name + ' · D' + c.id + ' ' + c.name : d.name, off: c.online === false }); });
             });
-            $('#wall').attr('class', 'grid gap-3 ' + $('#wallSize').val()).html(tiles.map((t) => `<figure class="tile bg-slate-900 rounded-xl overflow-hidden" data-i="${t.i}" data-ch="${t.ch}">
+            $('#wall').attr('class', 'grid gap-3 ' + $('#wallSize').val()).html(tiles.map((t) => `<figure class="tile bg-slate-900 rounded-xl overflow-hidden cursor-zoom-in" data-i="${t.i}" data-ch="${t.ch}" data-label="${esc(t.label)}">
                 <div class="aspect-video flex items-center justify-center text-slate-500 text-xs">${t.off ? 'Offline' : SPINNER}</div>
                 <figcaption class="px-2 py-1 text-[11px] text-slate-300 truncate">${esc(t.label)}</figcaption></figure>`).join('') || '<p class="text-sm text-slate-500">No channels to show yet.</p>');
             refreshWall();
@@ -357,6 +420,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
         DEVICES.forEach((_, i) => loadInfo(i));
     });
 </script>
+<script src="viewer.js"></script>
 </body>
 
 </html>
