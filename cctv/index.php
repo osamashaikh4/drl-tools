@@ -151,23 +151,13 @@ if (isset($_GET['api'])) {
             }
             $reply($out);
 
-        // Set the clock to this server's time, kept in the device's own time zone.
+        // Set the clock to this server's time in Pakistan time (UTC+5). Several devices were still on
+        // the factory time zone (UTC+8), which puts the wrong time on the video overlay.
         case 'synctime':
-            $err  = null;
-            $time = isapi_xml($d, '/ISAPI/System/time', $err);
-            if (!$time) {
-                $reply(['ok' => false, 'error' => $err]);
-            }
-            $tz = xv($time, 'timeZone') ?: 'CST-5:00:00';
-            // POSIX style: "CST-5:00:00" means UTC+5 (the sign is reversed).
-            $offset = 5 * 3600;
-            if (preg_match('/([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?/', $tz, $m)) {
-                $offset = ($m[1] === '-' ? 1 : -1) * ((int) $m[2] * 3600 + (int) ($m[3] ?? 0) * 60);
-            }
-            $local = gmdate('Y-m-d\TH:i:s', time() + $offset) . sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv(abs($offset), 3600), abs($offset) % 3600 / 60);
-            $xml = '<?xml version="1.0" encoding="UTF-8"?><Time><timeMode>manual</timeMode><localTime>' . $local . '</localTime><timeZone>' . htmlspecialchars($tz) . '</timeZone></Time>';
+            $local = date('Y-m-d\TH:i:s') . '+05:00';
+            $xml = '<?xml version="1.0" encoding="UTF-8"?><Time><timeMode>manual</timeMode><localTime>' . $local . '</localTime><timeZone>CST-5:00:00</timeZone></Time>';
             $r = isapi($d, 'PUT', '/ISAPI/System/time', $xml);
-            $reply(['ok' => !$r['error'], 'set' => $local, 'error' => $r['error']]);
+            $reply(['ok' => !$r['error'], 'set' => date('Y-m-d H:i:s') . ' (UTC+5)', 'error' => $r['error']]);
 
         case 'reboot':
             if (($_POST['confirm'] ?? '') !== $d['ip']) {
@@ -312,7 +302,7 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
         $(document).on('click', '.reload', function() { loadInfo($(this).closest('.dev').data('i')); });
         $(document).on('click', '.sync', function() {
             const i = $(this).closest('.dev').data('i');
-            if (!confirm(`Set ${DEVICES[i].name}'s clock to this server's time? It switches the device to manual time.`)) return;
+            if (!confirm(`Set ${DEVICES[i].name}'s clock to this server's time, in Pakistan time (UTC+5)? It switches the device to manual time.`)) return;
             $.post('index.php?api=synctime', { i }, null, 'json').done((r) => { toast(r.ok, r.ok ? 'Time set to ' + r.set : r.error); loadInfo(i); }).fail(() => toast(false, 'Request failed'));
         });
         $(document).on('click', '.reboot', function() {
