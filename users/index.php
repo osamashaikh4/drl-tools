@@ -141,6 +141,31 @@ $branches = get_branches_list($conn, $connections);
                     </span>
                 </div>
             </a>
+
+            <!-- Option 5: Kill Sessions Card -->
+            <a href="kill_session.php" class="press group bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-red-300 transition duration-200 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+
+                <div class="relative z-10">
+                    <div class="w-14 h-14 bg-red-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30 mb-6 group-hover:scale-105 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-3 py-1 rounded-full">Sessions</span>
+                    <h3 class="text-2xl font-bold text-slate-900 mt-3 mb-3">Kill User Sessions</h3>
+                </div>
+
+                <div class="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Hung / locked database logins</span>
+                    <span class="inline-flex items-center gap-2 font-semibold text-sm text-red-600 group-hover:text-red-700 group-hover:translate-x-1 transition">
+                        Open
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </span>
+                </div>
+            </a>
         </div>
     </div>
 
