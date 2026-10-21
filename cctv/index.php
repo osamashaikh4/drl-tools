@@ -246,6 +246,12 @@ $devices = array_map(fn($d) => ['name' => $d['name'] ?? $d['ip'], 'ip' => $d['ip
     <div class="h-full max-w-7xl mx-auto bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <div class="flex items-center justify-between gap-3 px-4 py-2 border-b border-slate-200">
             <h2 id="vTitle" class="text-sm font-bold text-slate-900 truncate"></h2>
+            <!-- Channel switcher, shown for NVR channels -->
+            <div id="vChannels" class="hidden flex items-center gap-1 ml-auto">
+                <button type="button" id="vPrev" class="px-2 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100" title="Previous channel (←)">◀</button>
+                <select id="vChannel" class="max-w-[16rem] rounded-lg border border-slate-300 text-sm py-1"></select>
+                <button type="button" id="vNext" class="px-2 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100" title="Next channel (→)">▶</button>
+            </div>
             <button type="button" id="vClose" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Close ✕</button>
         </div>
         <div class="flex-1 min-h-0 flex flex-col lg:flex-row">

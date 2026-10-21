@@ -19,10 +19,46 @@ $(function() {
         // Picture settings live on cameras reached directly; NVR channels show recordings.
         $('.vtab[data-t="settings"]').toggleClass('hidden', V.recorder);
         $('.vtab[data-t="recordings"]').toggleClass('hidden', !V.recorder);
+        fillChannels();
         tab(V.recorder ? 'recordings' : 'settings');
         refresh();
         schedule();
     }
+
+    // ---- Channel switcher (NVR channels) -------------------------------------------------------
+    const channels = () => (V.recorder && info[V.i] ? info[V.i].channels : []);
+    const channelLabel = (c) => `D${c.id} ${c.name}${c.online === false ? ' (offline)' : ''}`;
+    function fillChannels() {
+        const list = channels();
+        $('#vChannels').toggleClass('hidden', list.length < 2);
+        $('#vChannel').html(list.map((c) => `<option value="${c.id}" ${c.id === V.ch ? 'selected' : ''}>${esc(channelLabel(c))}</option>`).join(''));
+    }
+    // Show another channel of the same recorder: new picture, same zoom reset, same side panel.
+    function switchTo(ch) {
+        const c = channels().find((x) => x.id === ch);
+        if (!c || ch === V.ch) return;
+        Object.assign(V, { ch, scale: 1, x: 0, y: 0, loading: false });
+        $('#vTitle').text(DEVICES[V.i].name + ' · D' + c.id + ' ' + c.name);
+        $('#vChannel').val(ch);
+        img.removeAttribute('src');
+        $('#vMsg').html(c.online === false ? 'This channel is offline' : SPINNER + ' Loading picture…');
+        transform();
+        refresh();
+        if (!$('.vtab[data-t="recordings"]').hasClass('hidden')) loadRecordings($('#vDate').val() || today());
+    }
+    function step(dir) {
+        const list = channels(), at = list.findIndex((x) => x.id === V.ch);
+        if (list.length > 1) switchTo(list[(at + dir + list.length) % list.length].id);
+    }
+    $('#vChannel').on('change', function() { switchTo(+this.value); });
+    $('#vPrev').on('click', () => step(-1));
+    $('#vNext').on('click', () => step(1));
+    // Arrow keys step through channels, unless typing in a field.
+    $(document).on('keydown', (e) => {
+        if (V.i === null || !V.recorder || $(e.target).is('input, select, textarea')) return;
+        if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    });
     function close() {
         clearInterval(V.timer);
         V.i = null;
