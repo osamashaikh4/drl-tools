@@ -6,3 +6,6 @@ cctv/config.php
 router-tracker/config.php
 router-tracker/data/*
 !router-tracker/data/.htaccess
+activity/data/*
+!activity/data/.htaccess
+activity/models/*.onnx

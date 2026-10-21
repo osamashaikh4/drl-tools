@@ -76,6 +76,13 @@ return [
         'color'       => 'orange',
         'icon'        => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
     ],
+    'activity' => [
+        'name'        => 'Activity',
+        'description' => 'People on the cameras: how many, and standing, sitting, walking or on a phone. Counts only.',
+        'folder'      => 'activity',
+        'color'       => 'lime',
+        'icon'        => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+    ],
     'network' => [
         'name'        => 'Network Status',
         'description' => 'Ping, listener and database checks for every branch server with response speed.',
