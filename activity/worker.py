@@ -279,7 +279,8 @@ def main():
         return
 
     try:
-        devices = json.loads(subprocess.check_output([PHP, str(HERE / 'devices.php')], timeout=30))
+        # No console window: the worker runs every minute under pythonw.exe.
+        devices = json.loads(subprocess.check_output([PHP, str(HERE / 'devices.php')], timeout=30, creationflags=subprocess.CREATE_NO_WINDOW))
         models = Models(int(settings.get('threads', 2)))
         db = open_db()
     except Exception as e:  # noqa: BLE001 - shown on the page
