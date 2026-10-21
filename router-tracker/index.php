@@ -43,7 +43,65 @@ if (isset($_GET['api'])) {
             }
             unset($d);
             usort($r['devices'], fn($a, $b) => ($b['down'] + $b['up']) <=> ($a['down'] + $a['up']));
-            $reply(['ok' => true, 'devices' => $r['devices'], 'wanSeconds' => $r['wanSeconds'], 'ts' => $r['ts'], 'lastPoll' => $lastPoll]);
+            // Blocked devices and the Wi-Fi name, for the management panels.
+            $blocked = [];
+            $wifi = null;
+            try {
+                foreach (rt_qos_state($routers[$key]) as $d) {
+                    if (!$d['allowed']) {
+                        $blocked[] = ['mac' => $d['mac'], 'name' => $d['remark'] ?: $d['hostname'], 'label' => $label($d['mac'], $d['remark'] ?: $d['hostname']), 'online' => $d['online']];
+                    }
+                }
+                $wifi = rt_wifi($routers[$key]);
+            } catch (Throwable $e) {
+                // The device list above is what matters.
+            }
+            $reply(['ok' => true, 'devices' => $r['devices'], 'blocked' => $blocked, 'wifi' => $wifi, 'wanSeconds' => $r['wanSeconds'], 'ts' => $r['ts'], 'lastPoll' => $lastPoll]);
+
+        // Changes on the router (POST): block / unblock, speed limits, name, reboot.
+        case 'manage':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $reply(['ok' => false, 'error' => 'Wrong request method'], 405);
+            }
+            $action = (string) ($_POST['action'] ?? '');
+            $mac    = strtolower(trim((string) ($_POST['mac'] ?? '')));
+            try {
+                if ($action === 'reboot') {
+                    if (($_POST['confirm'] ?? '') !== 'REBOOT') {
+                        $reply(['ok' => false, 'error' => 'Confirmation did not match']);
+                    }
+                    $ok = rt_reboot($routers[$key]);
+                    $reply(['ok' => $ok, 'error' => $ok ? null : 'The router did not start rebooting']);
+                }
+                if (!preg_match('/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+                    $reply(['ok' => false, 'error' => 'Invalid MAC address'], 400);
+                }
+                // Speeds in KB/s: blank or 0 means no limit.
+                $kb = function ($v) {
+                    $v = trim((string) $v);
+                    if ($v === '') {
+                        return null;
+                    }
+                    if (!ctype_digit($v) || (int) $v > 38400) {
+                        throw new InvalidArgumentException('Limits are whole KB/s from 1 to 38400 (blank for no limit)');
+                    }
+                    return (int) $v === 0 ? null : (int) $v;
+                };
+                $change = match ($action) {
+                    'block'   => ['allowed' => false],
+                    'unblock' => ['allowed' => true, 'up' => null, 'down' => null],
+                    'limit'   => ['down' => $kb($_POST['down'] ?? ''), 'up' => $kb($_POST['up'] ?? '')],
+                    'rename'  => ['remark' => mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 63)],
+                    default   => null,
+                };
+                if ($change === null) {
+                    $reply(['ok' => false, 'error' => 'Unknown action'], 400);
+                }
+                $now = rt_qos_change($routers[$key], $mac, $change);
+                $reply(['ok' => true, 'device' => $now]);
+            } catch (Throwable $e) {
+                $reply(['ok' => false, 'error' => $e->getMessage()]);
+            }
 
         // History between two Unix times: bandwidth over time, per-device totals, connect / disconnect events.
         case 'history':
@@ -183,6 +241,12 @@ include __DIR__ . '/../header.php';
         <div id="collector" class="hidden mb-4 p-4 rounded-xl text-sm"></div>
         <div id="tiles" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6"></div>
 
+        <!-- Router: Wi-Fi name and reboot -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p id="routerInfo" class="text-sm text-slate-600"></p>
+            <button type="button" id="reboot" class="px-4 py-2 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">Reboot router</button>
+        </section>
+
         <!-- Live -->
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6">
             <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3 border-b border-slate-100">
@@ -190,6 +254,7 @@ include __DIR__ . '/../header.php';
                 <p id="liveStatus" class="text-xs text-slate-500 tabular-nums"></p>
             </div>
             <div id="live" class="overflow-x-auto"></div>
+            <div id="blocked" class="hidden border-t border-slate-100 px-5 py-3"></div>
         </section>
 
         <!-- History -->
@@ -250,6 +315,7 @@ include __DIR__ . '/../header.php';
 
         // ---- Live -------------------------------------------------------------------------------
         function loadLive() {
+            if ($('.manage-row').length) return;
             $.getJSON('index.php', { api: 'live', r: router() }).done((r) => {
                 live = r;
                 if (!r.ok) {
@@ -261,17 +327,82 @@ include __DIR__ . '/../header.php';
                 const bar = (v, c) => `<div class="flex items-center gap-2 justify-end"><span class="tabular-nums">${speed(v)}</span><span class="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden"><span class="block h-full rounded-full" style="width:${Math.round(v / max * 100)}%;background:${c}"></span></span></div>`;
                 $('#live').html(`<table class="w-full text-sm"><thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr>
                     <th class="px-5 py-2 text-left">Device</th><th class="px-3 py-2 text-left">IP</th><th class="px-3 py-2 text-left">MAC</th><th class="px-3 py-2 text-left">Link</th>
-                    <th class="px-3 py-2 text-right">Download</th><th class="px-5 py-2 text-right">Upload</th></tr></thead>
-                    <tbody>${r.devices.map((d) => `<tr class="border-t border-slate-100">
+                    <th class="px-3 py-2 text-right">Download</th><th class="px-3 py-2 text-right">Upload</th><th class="px-5 py-2"></th></tr></thead>
+                    <tbody>${r.devices.map((d) => `<tr class="dev-row border-t border-slate-100" data-mac="${esc(d.mac)}">
                         <td class="px-5 py-2 font-semibold text-slate-900">${esc(d.label || d.name || 'Unknown')}${d.label && d.name && d.label !== d.name ? ' <span class="font-normal text-xs text-slate-400">' + esc(d.name) + '</span>' : ''}</td>
                         <td class="px-3 py-2 font-mono text-xs">${esc(d.ip)}</td><td class="px-3 py-2 font-mono text-xs text-slate-500">${esc(d.mac)}</td>
                         <td class="px-3 py-2 text-xs text-slate-600">${d.conn === 'wifi' ? 'Wi-Fi' : esc(d.conn || '—')}</td>
-                        <td class="px-3 py-2 text-right">${bar(d.down, 'var(--series-1)')}</td><td class="px-5 py-2 text-right">${bar(d.up, 'var(--series-2)')}</td>
-                    </tr>`).join('') || '<tr><td colspan="6" class="px-5 py-6 text-center text-slate-400">No devices connected</td></tr>'}</tbody></table>`);
+                        <td class="px-3 py-2 text-right">${bar(d.down, 'var(--series-1)')}${d.downLimit ? '<div class="text-[11px] text-slate-500">limit ' + speed(d.downLimit) + '</div>' : ''}</td>
+                        <td class="px-3 py-2 text-right">${bar(d.up, 'var(--series-2)')}${d.upLimit ? '<div class="text-[11px] text-slate-500">limit ' + speed(d.upLimit) + '</div>' : ''}</td>
+                        <td class="px-5 py-2 text-right"><button type="button" class="manage text-xs font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2">Manage</button></td>
+                    </tr>`).join('') || '<tr><td colspan="7" class="px-5 py-6 text-center text-slate-400">No devices connected</td></tr>'}</tbody></table>`);
+                renderBlocked(r);
+                if (r.wifi) $('#routerInfo').html('Wi-Fi <span class="font-semibold text-slate-900">' + esc(r.wifi.ssid) + '</span> · ' + esc(r.wifi.security) + (r.wifi.hidden ? ' · hidden' : ''));
                 renderTiles();
                 renderCollector(r.lastPoll);
             }).fail(() => $('#liveStatus').html('<span class="text-red-600">Could not reach the server</span>'));
         }
+
+        // ---- Management --------------------------------------------------------------------------
+        const toast = (ok, message) => iziToast[ok ? 'success' : 'error']({ title: ok ? 'Done' : 'Failed', message, position: 'topRight' });
+        const manage = (data) => $.post('index.php?api=manage&r=' + encodeURIComponent(router()), data, null, 'json');
+
+        $(document).on('click', '.manage', function() {
+            const $row = $(this).closest('.dev-row'), mac = $row.data('mac');
+            if ($row.next().hasClass('manage-row')) { $row.next().remove(); return loadLive(); }
+            $('.manage-row').remove();
+            const d = live.devices.find((x) => x.mac === mac) || {};
+            $row.after(`<tr class="manage-row bg-slate-50"><td colspan="7" class="px-5 py-4">
+                <div class="flex flex-wrap items-end gap-4">
+                    <label class="text-xs font-semibold text-slate-600">Name on router
+                        <span class="flex gap-2 mt-1"><input class="m-name w-48 rounded-lg border border-slate-300 text-sm p-2" maxlength="63" value="${esc(d.name || '')}">
+                        <button type="button" class="m-rename px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold hover:bg-slate-100">Rename</button></span></label>
+                    <label class="text-xs font-semibold text-slate-600">Download limit (KB/s)
+                        <input class="m-down mt-1 block w-32 rounded-lg border border-slate-300 text-sm p-2" inputmode="numeric" placeholder="No limit" value="${d.downLimit || ''}"></label>
+                    <label class="text-xs font-semibold text-slate-600">Upload limit (KB/s)
+                        <input class="m-up mt-1 block w-32 rounded-lg border border-slate-300 text-sm p-2" inputmode="numeric" placeholder="No limit" value="${d.upLimit || ''}"></label>
+                    <button type="button" class="m-limit px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold hover:bg-slate-100">Set limits</button>
+                    <button type="button" class="m-block ml-auto px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-semibold text-white">Block internet access</button>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Blank limits mean no limit. Blocking keeps the device on Wi-Fi but cuts its internet; unblock it from the Blocked list.</p>
+            </td></tr>`);
+        });
+
+        function after(r, message) {
+            toast(r.ok, r.ok ? message : r.error);
+            if (r.ok) { $('.manage-row').remove(); loadLive(); }
+        }
+        $(document).on('click', '.m-rename', function() {
+            const mac = $(this).closest('.manage-row').prev().data('mac');
+            manage({ action: 'rename', mac, name: $(this).closest('.manage-row').find('.m-name').val() }).done((r) => after(r, 'Name saved on the router')).fail(() => toast(false, 'Request failed'));
+        });
+        $(document).on('click', '.m-limit', function() {
+            const $m = $(this).closest('.manage-row'), mac = $m.prev().data('mac');
+            manage({ action: 'limit', mac, down: $m.find('.m-down').val(), up: $m.find('.m-up').val() }).done((r) => after(r, 'Limits set')).fail(() => toast(false, 'Request failed'));
+        });
+        $(document).on('click', '.m-block', function() {
+            const mac = $(this).closest('.manage-row').prev().data('mac'), d = live.devices.find((x) => x.mac === mac) || {};
+            if (!confirm(`Block internet access for ${d.label || d.name || mac} (${mac})?`)) return;
+            manage({ action: 'block', mac }).done((r) => after(r, 'Device blocked')).fail(() => toast(false, 'Request failed'));
+        });
+
+        function renderBlocked(r) {
+            const list = r.blocked || [];
+            $('#blocked').toggleClass('hidden', !list.length).html(list.length ? `<h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Blocked (${list.length})</h3>` +
+                list.map((b) => `<div class="flex items-center gap-3 py-1 text-sm"><span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span class="font-semibold text-slate-900">${esc(b.label || b.name || 'Unknown')}</span><span class="font-mono text-xs text-slate-500">${esc(b.mac)}</span>
+                    <span class="text-xs text-slate-400">${b.online ? 'connected' : 'not connected'}</span>
+                    <button type="button" class="unblock ml-auto text-xs font-semibold text-emerald-700 hover:text-emerald-600 underline underline-offset-2" data-mac="${esc(b.mac)}">Unblock</button></div>`).join('') : '');
+        }
+        $(document).on('click', '.unblock', function() {
+            manage({ action: 'unblock', mac: $(this).data('mac') }).done((r) => after(r, 'Device unblocked')).fail(() => toast(false, 'Request failed'));
+        });
+        $('#reboot').on('click', function() {
+            const typed = prompt('Reboot the router? Everyone on it loses the connection for about a minute.\n\nType REBOOT to confirm:');
+            if (typed === null) return;
+            if (typed !== 'REBOOT') return toast(false, 'Confirmation did not match; nothing was done');
+            manage({ action: 'reboot', confirm: typed }).done((r) => toast(r.ok, r.ok ? 'The router is rebooting' : r.error)).fail(() => toast(false, 'Request failed'));
+        });
 
         // The page records while open; without the scheduled collector there are gaps when it is closed.
         function renderCollector(lastPoll) {

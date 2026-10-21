@@ -43,49 +43,70 @@ function rt_db(): PDO
     return $db;
 }
 
-// GET a Tenda goform JSON document. Logs in (and retries once) when the session has expired;
-// the session cookie is kept in data/ between requests.
+// One HTTP request to the router, with the session cookie kept in data/ between requests.
+function rt_http(array $router, string $method, string $path, ?string $body = null): string
+{
+    $ch = curl_init(rtrim($router['url'], '/') . '/' . ltrim($path, '/'));
+    $cookies = RT_DATA . '/cookies-' . md5($router['url']) . '.txt';
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_COOKIEJAR      => $cookies,
+        CURLOPT_COOKIEFILE     => $cookies,
+        CURLOPT_CUSTOMREQUEST  => $method,
+    ]);
+    if ($body !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    }
+    $res = curl_exec($ch);
+    $err = $res === false ? curl_error($ch) : null;
+    curl_close($ch);
+    if ($err) {
+        throw new RuntimeException("Router did not answer: {$err}");
+    }
+
+    return (string) $res;
+}
+
+// Same as the router's login page: user admin, password Base64-encoded.
+function rt_login(array $router): void
+{
+    rt_http($router, 'POST', 'login/Auth', http_build_query(['username' => 'admin', 'password' => base64_encode((string) ($router['password'] ?? ''))]));
+}
+
+// A login page (HTML) or an empty object means the session is missing or expired.
+function rt_json(string $body): ?array
+{
+    $data = json_decode($body, true);
+    return is_array($data) && $data !== [] && !str_contains($body, '<!DOCTYPE') ? $data : null;
+}
+
+// GET a Tenda goform JSON document, logging in (and retrying once) when needed.
 function rt_tenda_get(array $router, string $path): array
 {
-    $cookies = RT_DATA . '/cookies-' . md5($router['url']) . '.txt';
-    $request = function (string $method, string $url, ?string $body = null) use ($cookies) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 4,
-            CURLOPT_TIMEOUT        => 8,
-            CURLOPT_COOKIEJAR      => $cookies,
-            CURLOPT_COOKIEFILE     => $cookies,
-            CURLOPT_CUSTOMREQUEST  => $method,
-        ]);
-        if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-        }
-        $res = curl_exec($ch);
-        $err = $res === false ? curl_error($ch) : null;
-        curl_close($ch);
-        return [$res === false ? '' : (string) $res, $err];
-    };
-    $sep = str_contains($path, '?') ? '&' : '?';
-    $url = rtrim($router['url'], '/') . '/' . ltrim($path, '/') . $sep . 'r=' . mt_rand();
-
+    $path .= (str_contains($path, '?') ? '&' : '?') . 'r=' . mt_rand();
     for ($try = 0; $try < 2; $try++) {
-        [$body, $err] = $request('GET', $url);
-        if ($err) {
-            throw new RuntimeException("Router did not answer: {$err}");
-        }
-        $data = json_decode($body, true);
-        // A login page (HTML) or an empty object means the session is missing or expired.
-        if (is_array($data) && $data !== [] && !str_contains($body, '<!DOCTYPE')) {
+        if ($data = rt_json(rt_http($router, 'GET', $path))) {
             return $data;
         }
         if ($try === 0) {
-            // Same as the router's login page: user admin, password Base64-encoded.
-            [$res, $err] = $request('POST', rtrim($router['url'], '/') . '/login/Auth',
-                http_build_query(['username' => 'admin', 'password' => base64_encode((string) ($router['password'] ?? ''))]));
-            if ($err) {
-                throw new RuntimeException("Router did not answer: {$err}");
-            }
+            rt_login($router);
+        }
+    }
+    throw new RuntimeException('The router refused the login (check the password in router-tracker/config.php)');
+}
+
+// POST a change, as the router's own pages do. Returns the router's errCode.
+function rt_tenda_post(array $router, string $path, array $fields): int
+{
+    for ($try = 0; $try < 2; $try++) {
+        $data = rt_json(rt_http($router, 'POST', $path, http_build_query($fields)));
+        if ($data !== null) {
+            return (int) ($data['errCode'] ?? -1);
+        }
+        if ($try === 0) {
+            rt_login($router);
         }
     }
     throw new RuntimeException('The router refused the login (check the password in router-tracker/config.php)');
@@ -108,6 +129,8 @@ function rt_read(array $router): array
             'conn' => trim((string) ($d['qosListConnectType'] ?? '')),
             'down' => (float) ($d['qosListDownSpeed'] ?? 0),
             'up'   => (float) ($d['qosListUpSpeed'] ?? 0),
+            'downLimit' => rt_limit($d['qosListDownLimit'] ?? null),
+            'upLimit'   => rt_limit($d['qosListUpLimit'] ?? null),
         ];
     }
     $wan = null;
@@ -119,6 +142,88 @@ function rt_read(array $router): array
     }
 
     return ['devices' => array_values($devices), 'wanSeconds' => $wan];
+}
+
+// --- Management (Bandwidth Control / Administration in the router's own pages) -----------------
+
+// The router's "no limit" value, in KB/s; anything from 38401 up means unlimited.
+const RT_NO_LIMIT = 38528;
+
+// A reported limit as KB/s, or null for "no limit".
+function rt_limit($v): ?int
+{
+    return $v === null || (float) $v >= 38401 ? null : (int) $v;
+}
+
+// Every device the router has QoS / access entries for: online ones and blocked ones, by MAC.
+function rt_qos_state(array $router): array
+{
+    $q = rt_tenda_get($router, 'goform/getQos?modules=onlineList,blackList');
+    $list = [];
+    foreach ($q['onlineList'] ?? [] as $d) {
+        $mac = strtolower(trim((string) $d['qosListMac']));
+        $list[$mac] = [
+            'mac' => $mac, 'hostname' => (string) ($d['qosListHostname'] ?? ''), 'remark' => (string) ($d['qosListRemark'] ?? ''),
+            'up' => rt_limit($d['qosListUpLimit'] ?? null), 'down' => rt_limit($d['qosListDownLimit'] ?? null),
+            'allowed' => ($d['qosListAccess'] ?? 'true') !== 'false', 'online' => true, 'ip' => (string) ($d['qosListIP'] ?? ''),
+        ];
+    }
+    foreach ($q['blackList'] ?? [] as $d) {
+        $mac = strtolower(trim((string) $d['qosListMac']));
+        $list[$mac] = ($list[$mac] ?? [
+            'mac' => $mac, 'hostname' => (string) ($d['qosListHostname'] ?? ''), 'remark' => (string) ($d['qosListRemark'] ?? ''),
+            'up' => null, 'down' => null, 'online' => false, 'ip' => (string) ($d['qosListIP'] ?? ''),
+        ]);
+        $list[$mac]['allowed'] = false;
+    }
+
+    return $list;
+}
+
+// Change one device and send the whole list back: the router replaces its table with what it is
+// given, so every other device goes back exactly as it was. $change keys: allowed, up, down, remark.
+function rt_qos_change(array $router, string $mac, array $change): array
+{
+    $mac   = strtolower($mac);
+    $state = rt_qos_state($router);
+    if (!isset($state[$mac])) {
+        throw new RuntimeException('That device is not in the router\'s list (it may have disconnected)');
+    }
+    $state[$mac] = array_merge($state[$mac], $change);
+
+    // One line per device: hostname, remark ('' when same as hostname), MAC, up limit, down limit, access.
+    $clean = fn(string $s) => str_replace(["\t", "\n", "\r"], ' ', $s);
+    $lines = [];
+    foreach ($state as $d) {
+        $remark = $d['remark'] === $d['hostname'] ? '' : $d['remark'];
+        $up     = $d['allowed'] ? min(RT_NO_LIMIT, $d['up'] ?? RT_NO_LIMIT) : 0;
+        $down   = $d['allowed'] ? min(RT_NO_LIMIT, $d['down'] ?? RT_NO_LIMIT) : 0;
+        $lines[] = implode("\t", [$clean($d['hostname']), $clean($remark), strtoupper($d['mac']), $up, $down, $d['allowed'] ? 'true' : 'false']);
+    }
+    $code = rt_tenda_post($router, 'goform/setQos', ['module1' => 'qosList', 'qosList' => implode("\n", $lines)]);
+    if ($code !== 0) {
+        throw new RuntimeException("The router did not accept the change (code {$code})");
+    }
+
+    return rt_qos_state($router)[$mac] ?? [];
+}
+
+// Reboot (the router answers code 100 when it starts rebooting).
+function rt_reboot(array $router): bool
+{
+    return rt_tenda_post($router, 'goform/sysReboot', ['module1' => 'sysOperate', 'action' => 'reboot']) === 100;
+}
+
+// Wi-Fi name and security, never the password.
+function rt_wifi(array $router): array
+{
+    $w = rt_tenda_get($router, 'goform/getWifi?modules=wifiEn,wifiBasicCfg')['wifiBasicCfg'] ?? [];
+
+    return [
+        'ssid'     => $w['wifiSSID'] ?? null,
+        'security' => $w['wifiSecurityMode'] ?? null,
+        'hidden'   => ($w['wifiHideSSID'] ?? 'false') === 'true',
+    ];
 }
 
 // Read a router and store the sample, unless one was stored less than $minGap seconds ago.
