@@ -17,17 +17,18 @@ const ZK_ATTENDANCE_CACHE_SECONDS = 600;
 const ZK_ROLES = [0 => 'User', 2 => 'Enroller', 6 => 'Admin', 14 => 'Super Admin'];
 const ZK_PUNCH = [0 => 'Check-in', 1 => 'Check-out', 2 => 'Break-out', 3 => 'Break-in', 4 => 'Overtime-in', 5 => 'Overtime-out'];
 
-// Connected ZKLib for a device IP, or null when it does not answer. A machine that has just
-// served another request can ignore the next one for a few seconds, so try twice.
+// Connected ZKLib for a device IP, or null when it does not answer. A busy machine can ignore
+// requests for half a minute or more (seen on New Lab Bld), so keep trying for about 45 seconds.
 function zk_open(string $ip): ?ZKLib
 {
-    for ($try = 0; $try < 2; $try++) {
+    $until = time() + 45;
+    do {
         $zk = new ZKLib($ip);
         if ($zk->connect()) {
             return $zk;
         }
-        sleep(2);
-    }
+        sleep(1);
+    } while (time() < $until);
 
     return null;
 }

@@ -610,7 +610,7 @@ include __DIR__ . '/../header.php';
         keys.forEach((k) => setDot(k, 'busy'));
         let opened = false;
         keys.forEach((k) => {
-            $.ajax({ url: 'index.php?api=status', data: { d: k }, dataType: 'json', timeout: 60000 })
+            $.ajax({ url: 'index.php?api=status', data: { d: k }, dataType: 'json', timeout: 120000 })
                 .done((r) => { setDot(k, r.ok ? 'up' : 'down'); if (r.ok && !opened && !current) { opened = true; selectDevice(k); } })
                 .fail(() => setDot(k, 'down'));
         });
