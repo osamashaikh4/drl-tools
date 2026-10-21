@@ -3,3 +3,6 @@ vm-replication/config.php
 net-scan/data/*
 !net-scan/data/.htaccess
 cctv/config.php
+router-tracker/config.php
+router-tracker/data/*
+!router-tracker/data/.htaccess

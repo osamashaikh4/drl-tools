@@ -69,6 +69,13 @@ return [
         'color'       => 'amber',
         'icon'        => 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
     ],
+    'router-tracker' => [
+        'name'        => 'Router Activity',
+        'description' => 'Devices on the Tenda router and the bandwidth each uses, live and over time.',
+        'folder'      => 'router-tracker',
+        'color'       => 'orange',
+        'icon'        => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+    ],
     'network' => [
         'name'        => 'Network Status',
         'description' => 'Ping, listener and database checks for every branch server with response speed.',
