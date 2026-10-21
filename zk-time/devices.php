@@ -3,5 +3,4 @@
 return [
     'main1'  => ['name' => 'Reception', 'ip' => '10.1.52.205'],
     'main2'  => ['name' => 'New Lab Bld', 'ip' => '10.1.52.105'],
-    // 'sukkur' => ['name' => 'Sukkur', 'ip' => '172.16.9.205'],
 ];
