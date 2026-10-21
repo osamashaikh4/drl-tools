@@ -203,11 +203,14 @@ include __DIR__ . '/header.php';
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div class="flex flex-wrap items-center gap-3">
+        <input id="search" type="search" placeholder="Search branch, code or IP…" autocomplete="off" class="w-64 rounded-lg border border-slate-300 bg-white text-sm px-3 py-1.5">
         <div id="filters" class="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
             <button data-filter="all" class="px-3 py-1 rounded-md bg-slate-900 text-white font-semibold">All</button>
             <button data-filter="problem" class="px-3 py-1 rounded-md text-slate-600 hover:bg-slate-100">Problems</button>
             <button data-filter="DOWN" class="px-3 py-1 rounded-md text-slate-600 hover:bg-slate-100">Down</button>
             <button data-filter="SLOW" class="px-3 py-1 rounded-md text-slate-600 hover:bg-slate-100">Slow</button>
+        </div>
         </div>
         <div class="flex items-center gap-3 text-xs text-slate-500">
             <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> Fast &lt; <?= NET_FAST_MS ?> ms</span>
@@ -364,16 +367,22 @@ include __DIR__ . '/header.php';
             applyFilter();
         }
 
+        // Status filter and search box together: a row shows when it passes both.
+        const searchBox = document.getElementById('search');
         function applyFilter() {
+            const q = searchBox.value.trim().toLowerCase();
             rows.forEach((r) => {
                 const s = r.dataset.speed;
                 const dbDown = r.dataset.db === '0';
                 const show = filter === 'all'
                     || (filter === 'problem' && (s === 'DOWN' || s === 'ERROR' || s === 'SLOW' || dbDown))
                     || filter === s || (filter === 'DOWN' && s === 'ERROR');
-                r.classList.toggle('hidden', !show);
+                // The first cell holds "code - name" and the IP.
+                const match = !q || r.cells[0].textContent.toLowerCase().includes(q);
+                r.classList.toggle('hidden', !show || !match);
             });
         }
+        searchBox.addEventListener('input', applyFilter);
 
         async function checkBranch(row) {
             const bcode = row.dataset.bcode;
