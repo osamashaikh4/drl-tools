@@ -2,3 +2,4 @@ data-deficit/logs/
 vm-replication/config.php
 net-scan/data/*
 !net-scan/data/.htaccess
+cctv/config.php
