@@ -28,16 +28,17 @@ if (isset($_GET['api'])) {
         $reply(['ok' => false, 'error' => 'Unknown device'], 400);
     }
     $ip     = $devices[$key]['ip'];
+    $tcp    = !empty($devices[$key]['tcp']);
     $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
     $writes = ['settime', 'saveuser', 'deluser', 'addpunch', 'editpunch', 'delpunch', 'danger'];
     if (in_array($api, $writes, true) !== $isPost) {
         $reply(['ok' => false, 'error' => 'Wrong request method'], 405);
     }
-    $offline = ['ok' => false, 'error' => "The device at {$ip} did not answer (UDP 4370)."];
+    $offline = ['ok' => false, 'error' => "The device at {$ip} did not answer (" . ($tcp ? 'TCP' : 'UDP') . " 4370)."];
 
     // Changes run with the machine disabled (its screen shows it is busy), then re-enabled.
-    $write = function (callable $op) use ($ip, $offline, $reply) {
-        $zk = zk_open($ip);
+    $write = function (callable $op) use ($ip, $tcp, $offline, $reply) {
+        $zk = zk_open($ip, $tcp);
         if (!$zk) {
             $reply($offline);
         }
@@ -55,7 +56,7 @@ if (isset($_GET['api'])) {
         // Device details, capacity and clock.
         case 'status':
             $started = microtime(true);
-            $zk = zk_open($ip);
+            $zk = zk_open($ip, $tcp);
             if (!$zk) {
                 $reply($offline + ['ms' => round((microtime(true) - $started) * 1000)]);
             }
@@ -87,7 +88,7 @@ if (isset($_GET['api'])) {
             ]);
 
         case 'users':
-            $zk = zk_open($ip);
+            $zk = zk_open($ip, $tcp);
             if (!$zk) {
                 $reply($offline);
             }
@@ -97,7 +98,7 @@ if (isset($_GET['api'])) {
 
         // Attendance between two dates, optionally for one person / punch type.
         case 'attendance':
-            $data = zk_attendance($ip, !empty($_GET['refresh']));
+            $data = zk_attendance($ip, !empty($_GET['refresh']), $tcp);
             if (isset($data['error'])) {
                 $reply(['ok' => false, 'error' => $data['error']]);
             }
@@ -209,7 +210,7 @@ if (isset($_GET['api'])) {
                 $reply(['ok' => false, 'error' => $p]);
             }
             $dry = !empty($_POST['dry']);
-            $res = zk_add_punch(fn() => zk_open($ip), $p, $dry);
+            $res = zk_add_punch(fn() => zk_open($ip, $tcp), $p, $dry);
             if (!$dry) {
                 zk_forget_attendance($ip);
             }
@@ -228,13 +229,13 @@ if (isset($_GET['api'])) {
             $dry = !empty($_POST['dry']);
             if ($api === 'delpunch') {
                 $new = null;
-                $res = zk_delete_punch(fn() => zk_open($ip), $old, $dry);
+                $res = zk_delete_punch(fn() => zk_open($ip, $tcp), $old, $dry);
             } else {
                 $new = zk_punch_input(['userid' => $old[1]] + $_POST);
                 if (is_string($new)) {
                     $reply(['ok' => false, 'error' => $new]);
                 }
-                $res = zk_edit_punch(fn() => zk_open($ip), $old, $new, $dry);
+                $res = zk_edit_punch(fn() => zk_open($ip, $tcp), $old, $new, $dry);
             }
             if (!$dry) {
                 zk_forget_attendance($ip);
@@ -250,7 +251,7 @@ if (isset($_GET['api'])) {
             }
             if (in_array($op, ['restart', 'poweroff'], true)) {
                 // The machine goes away right after acknowledging, so no disable / enable round.
-                $zk = zk_open($ip);
+                $zk = zk_open($ip, $tcp);
                 if (!$zk) {
                     $reply($offline);
                 }
@@ -288,7 +289,7 @@ include __DIR__ . '/../header.php';
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-slate-900">ZK Devices</h1>
-        <p class="text-sm text-slate-500">ZKTeco attendance machines: clock, users, attendance log and maintenance (UDP 4370). Times are Pakistan time.</p>
+        <p class="text-sm text-slate-500">ZKTeco attendance machines: clock, users, attendance log and maintenance (UDP or TCP 4370). Times are Pakistan time.</p>
     </div>
 
     <!-- Device picker: each shows whether it answers. -->
@@ -296,7 +297,7 @@ include __DIR__ . '/../header.php';
         <?php foreach ($devices as $k => $dev): ?>
             <button type="button" class="device-tab px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-left hover:border-slate-400" data-d="<?= htmlspecialchars($k) ?>">
                 <span class="flex items-center gap-2 text-sm font-semibold text-slate-900"><span class="dot w-2 h-2 rounded-full bg-slate-300"></span><?= htmlspecialchars($dev['name']) ?></span>
-                <span class="block text-xs font-mono text-slate-500"><?= htmlspecialchars($dev['ip']) ?></span>
+                <span class="block text-xs font-mono text-slate-500"><?= htmlspecialchars($dev['ip']) ?><?= empty($dev['tcp']) ? '' : ' · TCP' ?></span>
             </button>
         <?php endforeach; ?>
     </div>

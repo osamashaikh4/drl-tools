@@ -17,11 +17,7 @@ class Attendance
         $command = Util::CMD_ATT_LOG_RRQ;
         $command_string = '';
 
-        // drl-tools: a large log takes the machine a while to prepare before it answers (about 6 s
-        // for 78,820 records on New Lab Bld), so wait up to 60 s for that first answer.
-        stream_set_timeout($self->_zkclient, 60);
         $session = $self->_command($command, $command_string, Util::COMMAND_TYPE_DATA);
-        stream_set_timeout($self->_zkclient, 5);
         if ($session === false) {
             return [];
         }

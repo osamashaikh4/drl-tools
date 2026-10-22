@@ -27,10 +27,10 @@ class Connect
         if (!$self->_zkclient) {
             return false;
         }
-        fwrite($self->_zkclient, $buf);
+        $self->_send($buf);
 
         try {
-            $self->_data_recv = (string) @fread($self->_zkclient, 1024);
+            $self->_data_recv = $self->_recv();
             if (strlen($self->_data_recv) > 0) {
                 $u = unpack('H2h1/H2h2/H2h3/H2h4/H2h5/H2h6', substr($self->_data_recv, 0, 8));
 
@@ -70,9 +70,9 @@ class Connect
         $buf = Util::createHeader($command, $chksum, $session_id, $reply_id, $command_string);
 
 
-        fwrite($self->_zkclient, $buf);
+        $self->_send($buf);
         try {
-            $self->_data_recv = (string) @fread($self->_zkclient, 1024);
+            $self->_data_recv = $self->_recv();
 
             $self->_session_id = 0;
             return Util::checkValid($self->_data_recv);

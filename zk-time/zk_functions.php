@@ -27,11 +27,11 @@ const ZK_VERIFY = [1 => 'Fingerprint', 0 => 'Password', 2 => 'Card'];
 
 // Connected ZKLib for a device IP, or null when it does not answer. A busy machine can ignore
 // requests for half a minute or more (seen on New Lab Bld), so keep trying for about 45 seconds.
-function zk_open(string $ip): ?ZKLib
+function zk_open(string $ip, bool $tcp = false): ?ZKLib
 {
     $until = time() + 45;
     do {
-        $zk = new ZKLib($ip);
+        $zk = new ZKLib($ip, 4370, $tcp);
         if ($zk->connect()) {
             return $zk;
         }
@@ -129,7 +129,7 @@ function zk_cache_file(string $ip): string
 // Attendance log of a device (and its user names), from the cache when fresh enough.
 // Returns ['fetched' => 'Y-m-d H:i:s', 'records' => [...], 'names' => [userid => name]],
 // or ['error' => '...'] when the machine does not answer or the download comes back short.
-function zk_attendance(string $ip, bool $refresh): array
+function zk_attendance(string $ip, bool $refresh, bool $tcp = false): array
 {
     $file = zk_cache_file($ip);
     if (!$refresh && is_file($file) && filemtime($file) > time() - ZK_ATTENDANCE_CACHE_SECONDS) {
@@ -139,9 +139,9 @@ function zk_attendance(string $ip, bool $refresh): array
         }
     }
 
-    $zk = zk_open($ip);
+    $zk = zk_open($ip, $tcp);
     if (!$zk) {
-        return ['error' => "The device at {$ip} did not answer (UDP 4370)."];
+        return ['error' => "The device at {$ip} did not answer (" . ($tcp ? 'TCP' : 'UDP') . " 4370)."];
     }
     $names = [];
     foreach (zk_users($zk) as $u) {

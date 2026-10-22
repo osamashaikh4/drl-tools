@@ -339,12 +339,18 @@ class Util
         $data = '';
         $bytes = self::getSize($self);
 
+        // drl-tools: over TCP a machine can send the data inline as the answer itself (CMD_DATA)
+        // instead of announcing it (CMD_PREPARE_DATA) and sending packets; same layout as a first packet.
+        if (strlen($self->_data_recv) >= 8 && unpack('v', $self->_data_recv)[1] == self::CMD_DATA) {
+            return $first ? $self->_data_recv : substr($self->_data_recv, 8);
+        }
+
         if ($bytes) {
             $received = 0;
             $errors = 0;
 
             while ($bytes > $received) {
-                $dataRec = @fread($self->_zkclient, 1032);
+                $dataRec = $self->_recv(1032);
                 // drl-tools: a UDP stream gives '' (not false) when the wait runs out.
                 $ret = ($dataRec === false || $dataRec === '') ? false : strlen($dataRec);
 
@@ -375,7 +381,7 @@ class Util
             }
 
             //flush socket
-            $dataRec = (string) @fread($self->_zkclient, 1024);
+            $dataRec = $self->_recv();
             unset($dataRec);
         }
 

@@ -8,24 +8,28 @@ class ZKLib
     public $_ip;
     public $_port;
     public $_zkclient;
+    public $_tcp = false;
 
     public $_data_recv = '';
     public $_session_id = 0;
+    public $_reply_id = 0;
     public $_section = '';
 
     /**
      * ZKLib constructor.
      * @param string $ip Device IP
      * @param integer $port Default: 4370
+     * @param bool $tcp drl-tools: talk TCP instead of UDP (same port)
      */
-    public function __construct($ip, $port = 4370)
+    public function __construct($ip, $port = 4370, $tcp = false)
     {
         $this->_ip = $ip;
         $this->_port = $port;
+        $this->_tcp = $tcp;
 
-        // drl-tools: a UDP stream instead of the sockets extension (not enabled in this PHP),
+        // drl-tools: a UDP (or TCP) stream instead of the sockets extension (not enabled in this PHP),
         // and a 5 second wait for each answer instead of 60.
-        $this->_zkclient = @stream_socket_client('udp://' . $ip . ':' . $port, $errno, $errstr, 5);
+        $this->_zkclient = @stream_socket_client(($tcp ? 'tcp://' : 'udp://') . $ip . ':' . $port, $errno, $errstr, 5);
         if ($this->_zkclient) {
             stream_set_timeout($this->_zkclient, 5);
         }
@@ -45,15 +49,38 @@ class ZKLib
         $chksum = 0;
         $session_id = $this->_session_id;
 
-        $u = unpack('H2h1/H2h2/H2h3/H2h4/H2h5/H2h6/H2h7/H2h8', substr($this->_data_recv, 0, 8));
-        $reply_id = hexdec($u['h8'] . $u['h7']);
+        // drl-tools: after an unanswered command, carry on from the last reply id sent.
+        if (strlen($this->_data_recv) >= 8) {
+            $u = unpack('H2h1/H2h2/H2h3/H2h4/H2h5/H2h6/H2h7/H2h8', substr($this->_data_recv, 0, 8));
+            $reply_id = hexdec($u['h8'] . $u['h7']);
+        } else {
+            $reply_id = $this->_reply_id;
+        }
 
         $buf = Util::createHeader($command, $chksum, $session_id, $reply_id, $command_string);
+        $this->_reply_id = unpack('v4', $buf)[4];
 
-        fwrite($this->_zkclient, $buf);
+        $this->_send($buf);
 
         try {
-            $this->_data_recv = (string) @fread($this->_zkclient, 1024);
+            // drl-tools: a large download takes the machine a while to prepare before it answers (about
+            // 6 s for 78,820 records on New Lab Bld, longer over TCP), so wait up to 60 s for that answer.
+            // Over TCP an answer that came too late to an earlier command is still queued in the stream;
+            // skip anything that does not carry this command's reply id.
+            $until = microtime(true) + ($type === Util::COMMAND_TYPE_DATA ? 60 : 5);
+            stream_set_timeout($this->_zkclient, $type === Util::COMMAND_TYPE_DATA ? 60 : 5);
+            do {
+                $this->_data_recv = $this->_recv();
+                $stale = $this->_tcp && strlen($this->_data_recv) >= 8 && unpack('v4', $this->_data_recv)[4] !== $this->_reply_id;
+            } while ($stale && microtime(true) < $until);
+            stream_set_timeout($this->_zkclient, 5);
+            if ($stale) {
+                $this->_data_recv = '';
+            }
+            // drl-tools: no answer; return false quietly (the warnings below broke the JSON replies).
+            if (strlen($this->_data_recv) < 8) {
+                return false;
+            }
 
             $u = unpack('H2h1/H2h2/H2h3/H2h4/H2h5/H2h6', substr($this->_data_recv, 0, 8));
 
@@ -72,6 +99,49 @@ class ZKLib
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    // drl-tools: one packet out. Over TCP each packet goes in an 8-byte frame (magic 0x7D825050, length).
+    public function _send($buf)
+    {
+        if ($this->_tcp) {
+            $buf = pack('VV', 0x7D825050, strlen($buf)) . $buf;
+        }
+        @fwrite($this->_zkclient, $buf);
+    }
+
+    // drl-tools: one packet in, without the TCP frame; '' when the wait runs out. Over TCP a packet
+    // can be a whole 64 KB block of a data transfer arriving in pieces, so read all of it.
+    public function _recv($udpSize = 1024)
+    {
+        if (!$this->_tcp) {
+            return (string) @fread($this->_zkclient, $udpSize);
+        }
+        $head = $this->_recvBytes(8);
+        if (strlen($head) < 8) {
+            return '';
+        }
+        $h = unpack('Vmagic/Vlen', $head);
+        if ($h['magic'] !== 0x7D825050) {
+            return '';
+        }
+        $buf = $this->_recvBytes($h['len']);
+
+        return strlen($buf) === $h['len'] ? $buf : '';
+    }
+
+    private function _recvBytes($n)
+    {
+        $buf = '';
+        while (strlen($buf) < $n) {
+            $chunk = @fread($this->_zkclient, $n - strlen($buf));
+            if ($chunk === false || $chunk === '') {
+                break;
+            }
+            $buf .= $chunk;
+        }
+
+        return $buf;
     }
 
     /**
