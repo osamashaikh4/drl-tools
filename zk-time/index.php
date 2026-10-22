@@ -34,11 +34,11 @@ if (isset($_GET['api'])) {
     if (in_array($api, $writes, true) !== $isPost) {
         $reply(['ok' => false, 'error' => 'Wrong request method'], 405);
     }
-    $offline = ['ok' => false, 'error' => "The device at {$ip} did not answer (" . ($tcp ? 'TCP' : 'UDP') . " 4370)."];
+    $offline = ['ok' => false, 'error' => "The device at {$ip} did not answer (UDP 4370)."];
 
     // Changes run with the machine disabled (its screen shows it is busy), then re-enabled.
-    $write = function (callable $op) use ($ip, $tcp, $offline, $reply) {
-        $zk = zk_open($ip, $tcp);
+    $write = function (callable $op) use ($ip, $offline, $reply) {
+        $zk = zk_open($ip);
         if (!$zk) {
             $reply($offline);
         }
@@ -56,7 +56,7 @@ if (isset($_GET['api'])) {
         // Device details, capacity and clock.
         case 'status':
             $started = microtime(true);
-            $zk = zk_open($ip, $tcp);
+            $zk = zk_open($ip);
             if (!$zk) {
                 $reply($offline + ['ms' => round((microtime(true) - $started) * 1000)]);
             }
@@ -88,7 +88,7 @@ if (isset($_GET['api'])) {
             ]);
 
         case 'users':
-            $zk = zk_open($ip, $tcp);
+            $zk = zk_open($ip);
             if (!$zk) {
                 $reply($offline);
             }
@@ -251,7 +251,7 @@ if (isset($_GET['api'])) {
             }
             if (in_array($op, ['restart', 'poweroff'], true)) {
                 // The machine goes away right after acknowledging, so no disable / enable round.
-                $zk = zk_open($ip, $tcp);
+                $zk = zk_open($ip);
                 if (!$zk) {
                     $reply($offline);
                 }
@@ -289,7 +289,7 @@ include __DIR__ . '/../header.php';
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-slate-900">ZK Devices</h1>
-        <p class="text-sm text-slate-500">ZKTeco attendance machines: clock, users, attendance log and maintenance (UDP or TCP 4370). Times are Pakistan time.</p>
+        <p class="text-sm text-slate-500">ZKTeco attendance machines: clock, users, attendance log and maintenance (UDP 4370; on a TCP device the attendance log comes over TCP). Times are Pakistan time.</p>
     </div>
 
     <!-- Device picker: each shows whether it answers. -->
@@ -297,7 +297,7 @@ include __DIR__ . '/../header.php';
         <?php foreach ($devices as $k => $dev): ?>
             <button type="button" class="device-tab px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-left hover:border-slate-400" data-d="<?= htmlspecialchars($k) ?>">
                 <span class="flex items-center gap-2 text-sm font-semibold text-slate-900"><span class="dot w-2 h-2 rounded-full bg-slate-300"></span><?= htmlspecialchars($dev['name']) ?></span>
-                <span class="block text-xs font-mono text-slate-500"><?= htmlspecialchars($dev['ip']) ?><?= empty($dev['tcp']) ? '' : ' · TCP' ?></span>
+                <span class="block text-xs font-mono text-slate-500"><?= htmlspecialchars($dev['ip']) ?><?= empty($dev['tcp']) ? '' : ' · log over TCP' ?></span>
             </button>
         <?php endforeach; ?>
     </div>

@@ -28,8 +28,11 @@ class Attendance
         if (!empty($attData)) {
             $attData = substr($attData, 10);
 
-            while (strlen($attData) > 40) {
-                $u = unpack('H78', substr($attData, 0, 39));
+            // drl-tools: step through by position; cutting 40 bytes off the front each time copied
+            // the rest of the log for every record (46 s of 70 for 78,891 records on New Lab Bld).
+            $len = strlen($attData);
+            for ($pos = 0; $len - $pos > 40; $pos += 40) {
+                $u = unpack('H78', substr($attData, $pos, 39));
 
                 $u1 = hexdec(substr($u[1], 4, 2));
                 $u2 = hexdec(substr($u[1], 6, 2));
@@ -47,8 +50,6 @@ class Attendance
                     'timestamp' => $timestamp,
                     'type' => $type
                 ];
-
-                $attData = substr($attData, 40);
             }
         }
 

@@ -25,9 +25,23 @@ const ZK_PUNCH = [0 => 'Check-in', 1 => 'Check-out', 2 => 'Break-out', 3 => 'Bre
 // Verify modes of an attendance record (ZK\Util::ATT_STATE_*).
 const ZK_VERIFY = [1 => 'Fingerprint', 0 => 'Password', 2 => 'Card'];
 
-// Connected ZKLib for a device IP, or null when it does not answer. A busy machine can ignore
-// requests for half a minute or more (seen on New Lab Bld), so keep trying for about 45 seconds.
-function zk_open(string $ip, bool $tcp = false): ?ZKLib
+// Connected ZKLib (UDP) for a device IP, or null when it does not answer. With $logOverTcp,
+// zk_records() on it fetches the attendance log over TCP: New Lab Bld sends its log in about 15 s
+// that way instead of about 70 s, but takes about 4 s to answer each small command over TCP
+// (0.01 s over UDP), so everything else stays on UDP.
+function zk_open(string $ip, bool $logOverTcp = false): ?ZKLib
+{
+    $zk = zk_connect($ip, false);
+    if ($zk) {
+        $zk->_logOverTcp = $logOverTcp;
+    }
+
+    return $zk;
+}
+
+// A busy machine can ignore requests for half a minute or more (seen on New Lab Bld), so keep
+// trying for about 45 seconds.
+function zk_connect(string $ip, bool $tcp): ?ZKLib
 {
     $until = time() + 45;
     do {
@@ -110,9 +124,22 @@ function zk_users(ZKLib $zk): array
 function zk_records(ZKLib $zk)
 {
     $expected = zk_sizes($zk)['records'] ?? null;
-    $records  = [];
-    foreach ($zk->getAttendance() as $a) {
-        $records[] = [$a['timestamp'], trim((string) $a['id']), (int) $a['type'], (int) $a['state']];
+    $log      = $zk;
+    if ($zk->_logOverTcp) {
+        $log = zk_connect($zk->_ip, true);
+        if (!$log) {
+            return "The device at {$zk->_ip} did not answer over TCP 4370 for the attendance log.";
+        }
+    }
+    $records = [];
+    try {
+        foreach ($log->getAttendance() as $a) {
+            $records[] = [$a['timestamp'], trim((string) $a['id']), (int) $a['type'], (int) $a['state']];
+        }
+    } finally {
+        if ($log !== $zk) {
+            zk_close($log);
+        }
     }
     if ($expected !== null && count($records) < $expected) {
         return 'The device sent ' . count($records) . " of {$expected} attendance records; it may be busy. Try again in a moment.";
@@ -129,6 +156,7 @@ function zk_cache_file(string $ip): string
 // Attendance log of a device (and its user names), from the cache when fresh enough.
 // Returns ['fetched' => 'Y-m-d H:i:s', 'records' => [...], 'names' => [userid => name]],
 // or ['error' => '...'] when the machine does not answer or the download comes back short.
+// With $tcp the log itself comes over TCP (see zk_open).
 function zk_attendance(string $ip, bool $refresh, bool $tcp = false): array
 {
     $file = zk_cache_file($ip);
@@ -141,7 +169,7 @@ function zk_attendance(string $ip, bool $refresh, bool $tcp = false): array
 
     $zk = zk_open($ip, $tcp);
     if (!$zk) {
-        return ['error' => "The device at {$ip} did not answer (" . ($tcp ? 'TCP' : 'UDP') . " 4370)."];
+        return ['error' => "The device at {$ip} did not answer (UDP 4370)."];
     }
     $names = [];
     foreach (zk_users($zk) as $u) {

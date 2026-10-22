@@ -16,7 +16,7 @@ if (is_string($p)) {
 }
 $ip = $devices[$args[0]]['ip'];
 echo ($write ? 'WRITE' : 'DRY RUN') . " on {$args[0]} ({$ip}): " . json_encode($p) . "\n";
-$r = zk_add_punch(fn() => zk_open($ip), $p, !$write);
+$r = zk_add_punch(fn() => zk_open($ip, !empty($devices[$args[0]]['tcp'])), $p, !$write);
 zk_log_punch(['by' => 'cli-hardware-test', 'device' => $args[0], 'ip' => $ip, 'dry' => !$write] + $p + ['result' => $r]);
 echo json_encode($r, JSON_PRETTY_PRINT), "\n";
 exit($r['ok'] ? 0 : 1);

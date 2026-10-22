@@ -9,6 +9,8 @@ class ZKLib
     public $_port;
     public $_zkclient;
     public $_tcp = false;
+    // drl-tools: on a UDP connection, have zk_records() fetch the attendance log over its own TCP connection.
+    public $_logOverTcp = false;
 
     public $_data_recv = '';
     public $_session_id = 0;
