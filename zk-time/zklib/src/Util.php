@@ -96,22 +96,26 @@ class Util
      */
     static public function decodeTime($t)
     {
+        // drl-tools: whole-number division; `%` on the float from `/` raises a deprecation, which
+        // IIS FastCGI turns into a 500.
+        $t = (int) $t;
+
         $second = $t % 60;
-        $t = $t / 60;
+        $t = intdiv($t, 60);
 
         $minute = $t % 60;
-        $t = $t / 60;
+        $t = intdiv($t, 60);
 
         $hour = $t % 24;
-        $t = $t / 24;
+        $t = intdiv($t, 24);
 
         $day = $t % 31 + 1;
-        $t = $t / 31;
+        $t = intdiv($t, 31);
 
         $month = $t % 12 + 1;
-        $t = $t / 12;
+        $t = intdiv($t, 12);
 
-        $year = floor($t + 2000);
+        $year = $t + 2000;
 
         $d = date('Y-m-d H:i:s', strtotime(
             $year . '-' . $month . '-' . $day . ' ' . $hour . ':' . $minute . ':' . $second
