@@ -16,7 +16,8 @@ drl-tools/
 ├── commands/          run INSERT/UPDATE on branches
 ├── data-deficit/      branch vs 253 deficit check & fill (logs go to data-deficit/logs/)
 ├── users/             add/copy/transfer/manage users (+ its own conn.php for 254 and system account)
-└── cards/             new card / copy cards (ICARDS + IC_HOLDERS) between branches
+├── cards/             new card / copy cards (ICARDS + IC_HOLDERS) between branches
+└── dengue/            dengue report: Record + Count sheets in one Excel (PhpSpreadsheet in dengue/vendor/)
 ```
 
 ## Adding a new tool
