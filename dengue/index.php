@@ -18,7 +18,6 @@ include __DIR__ . '/../header.php';
             ← Back to Dashboard
         </a>
         <h1 class="text-2xl font-bold text-slate-900">Dengue Report</h1>
-        <p class="text-sm text-slate-500">Positive dengue (SER-21) cases and per-branch counts for a period, from the 253 database, in one Excel file.</p>
     </div>
 
     <form id="dengueForm" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
@@ -26,7 +25,7 @@ include __DIR__ . '/../header.php';
             <p class="text-sm text-red-600">Could not load the branch list from the 253 database.</p>
         <?php endif; ?>
         <div>
-            <label for="bcode" class="block text-sm font-semibold text-slate-700 mb-1">Branches <span class="font-normal text-slate-400">(none picked = all)</span></label>
+            <label for="bcode" class="block text-sm font-semibold text-slate-700 mb-1">Branches</label>
             <select id="bcode" multiple class="w-full">
                 <?php foreach ($branches as $bcode => $bname): ?>
                     <option value="<?= htmlspecialchars($bcode) ?>"><?= htmlspecialchars($bname) ?></option>
@@ -34,12 +33,11 @@ include __DIR__ . '/../header.php';
             </select>
         </div>
         <div>
-            <label for="from" class="block text-sm font-semibold text-slate-700 mb-1">From <span class="text-red-500">*</span></label>
-            <input type="date" id="from" required value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
-        <div>
-            <label for="to" class="block text-sm font-semibold text-slate-700 mb-1">To (inclusive) <span class="text-red-500">*</span></label>
-            <input type="date" id="to" required value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" class="w-full rounded-lg border-slate-300 border text-sm p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <label for="daterange" class="block text-sm font-semibold text-slate-700 mb-1">Date Range</label>
+            <input type="text" id="daterange" readonly class="w-full rounded-lg border-slate-300 border text-sm p-2.5 bg-white cursor-pointer">
+            <!-- The picker writes the chosen range here. -->
+            <input type="hidden" id="from" value="<?= date('Y-m-d') ?>">
+            <input type="hidden" id="to" value="<?= date('Y-m-d') ?>">
         </div>
 
         <div class="space-y-2 pt-1">
@@ -55,11 +53,25 @@ include __DIR__ . '/../header.php';
     </form>
 </div>
 
+<link rel="stylesheet" href="../assets/css/daterangepicker.css">
+<script src="../assets/js/moment.js"></script>
+<script src="../assets/js/daterangepicker.js"></script>
 <script>
     $(function() {
         $('#bcode').select2({
             placeholder: 'All branches',
             width: '100%'
+        });
+
+        // Same date range picker as the dengue app; the chosen range fills the hidden from / to.
+        $('#daterange').daterangepicker({
+            opens: 'left',
+            maxDate: new Date(),
+            startDate: moment($('#from').val(), 'YYYY-MM-DD'),
+            endDate: moment($('#to').val(), 'YYYY-MM-DD'),
+        }, function(start, end) {
+            $('#from').val(start.format('YYYY-MM-DD'));
+            $('#to').val(end.format('YYYY-MM-DD'));
         });
 
         function setRunning(on) {
