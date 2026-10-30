@@ -211,15 +211,6 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 </table>
             </div>
             <div class="mt-4 flex flex-wrap items-center gap-6 text-sm text-slate-700">
-                <label class="inline-flex items-center gap-2">Father / husband name stored as
-                    <select id="fhPrefix" class="rounded-lg border border-slate-300 text-sm p-1.5">
-                        <option value="auto">S/o (D/o for women)</option>
-                        <option value="S/o">S/o</option>
-                        <option value="D/o">D/o</option>
-                        <option value="W/o">W/o</option>
-                        <option value="">name only</option>
-                    </select>
-                </label>
                 <span class="text-xs text-slate-500">A year on its own (e.g. 2029) is stored as 31 Dec of that year.</span>
             </div>
             <div id="designationMap" class="hidden mt-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
@@ -483,7 +474,6 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             renderMapping();
             rebuild();
         });
-        $('#fhPrefix').on('change', rebuild);
 
         // ---------- Turning rows into cards ----------
         function show(v) {
@@ -578,8 +568,15 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     if (c.family.some((f) => f.relation === 'WIFE')) h.ICHGENDER = 'M';
                     else if (c.family.some((f) => f.relation === 'HUSBAND')) h.ICHGENDER = 'F';
                 }
-                const pref = $('#fhPrefix').val() === 'auto' ? (h.ICHGENDER === 'F' ? 'D/o' : 'S/o') : $('#fhPrefix').val();
-                h.ICHFHNAME = h.fatherRaw ? (pref && !/^(S|D|W)\/o\b/i.test(h.fatherRaw) ? pref + ' ' + h.fatherRaw : h.fatherRaw) : '';
+                // Still unknown: asked on the preview row.
+                h.genderAsked = !h.ICHGENDER;
+                if (h.genderAsked) h.ICHGENDER = genderPicks[c.ICCODE.toUpperCase()] || '';
+                // S/o, D/o or W/o: a prefix already in the sheet, else D/o for women and S/o otherwise; each card can change it on its preview row.
+                const given = h.fatherRaw.match(/^([SDW])\/o\b\.?\s*/i);
+                h.fatherBase = given ? h.fatherRaw.slice(given[0].length) : h.fatherRaw;
+                const auto = given ? given[1].toUpperCase() + '/o' : (h.ICHGENDER === 'F' ? 'D/o' : 'S/o');
+                h.fhPrefix = c.ICCODE.toUpperCase() in prefixPicks ? prefixPicks[c.ICCODE.toUpperCase()] : auto;
+                h.ICHFHNAME = h.fatherBase ? (h.fhPrefix ? h.fhPrefix + ' ' : '') + h.fatherBase : '';
                 [h.ICHCONTACT_NO, h.ICHEMERGENCYNO, h.ICHLANDLINE] = [c.phones[0] || '', c.phones[1] || '', c.phones[2] || ''];
                 if (c.phones.length > 3) c.warnings.push((c.phones.length - 3) + ' extra phone number(s) not stored');
                 if (c.family.length && c.ICCODE.length > 17) c.warnings.push('card code too long for family member codes — this card will be skipped');
@@ -606,6 +603,17 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             }).join(''));
             $('#designationMap').toggleClass('hidden', unmatched.size === 0);
         }
+        const genderPicks = {}; // card code (upper case) -> 'M' / 'F', for holders whose gender the sheet doesn't give
+        const prefixPicks = {}; // card code (upper case) -> 'S/o' / 'D/o' / 'W/o' / '' chosen on the preview row
+        $('#previewBody').on('change', '.gender-pick', function() {
+            genderPicks[this.dataset.code] = this.value;
+            delete prefixPicks[this.dataset.code]; // let the prefix follow the new gender
+            rebuild();
+        });
+        $('#previewBody').on('change', '.prefix-pick', function() {
+            prefixPicks[this.dataset.code] = this.value;
+            rebuild();
+        });
         $('#designationMapRows').on('change', '.designation-pick', function() {
             designationPicks[this.dataset.key] = this.value;
             rebuild();
@@ -620,16 +628,23 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         function renderPreview() {
             const skipped = cards.filter((c) => !c.holder.ICHENAME).length;
             const withWarnings = cards.filter((c) => c.warnings.length).length;
+            const noGender = cards.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length;
             const members = cards.reduce((n, c) => n + c.family.length, 0);
             $('#previewSummary').html(cards.length + ' card' + (cards.length === 1 ? '' : 's') + ' · ' + members + ' family member' + (members === 1 ? '' : 's')
-                + (withWarnings ? ' · <span class="warn">' + withWarnings + ' with warnings</span>' : '') + (skipped ? ' · <span class="text-red-600">' + skipped + ' will be skipped</span>' : ''));
+                + (withWarnings ? ' · <span class="warn">' + withWarnings + ' with warnings</span>' : '') + (noGender ? ' · <span class="warn">' + noGender + ' without gender</span>' : '') + (skipped ? ' · <span class="text-red-600">' + skipped + ' will be skipped</span>' : ''));
             $('#previewBody').html(cards.map((c) => {
                 const h = c.holder;
                 return '<tr class="' + (c.warnings.length ? 'bg-amber-50/60' : '') + '">'
                     + '<td class="px-3 py-2 text-xs text-slate-400 tabular-nums">' + c.row + '</td>'
                     + '<td class="px-3 py-2 font-mono text-xs">' + esc(c.ICCODE) + (c.form ? '<div class="text-slate-400">form ' + esc(c.form) + '</div>' : '') + '</td>'
-                    + '<td class="px-3 py-2">' + esc(h.ICHENAME || '—') + (h.ICHGENDER ? ' <span class="text-xs text-slate-400">(' + h.ICHGENDER + ')</span>' : '') + '</td>'
-                    + '<td class="px-3 py-2">' + esc(h.ICHFHNAME) + '</td>'
+                    + '<td class="px-3 py-2">' + esc(h.ICHENAME || '—') + (h.genderAsked
+                        ? ' <select data-code="' + esc(c.ICCODE.toUpperCase()) + '" class="gender-pick ml-1 rounded-md border text-xs p-0.5 bg-white ' + (h.ICHGENDER ? 'border-slate-300' : 'border-amber-400 text-slate-500') + '">'
+                            + [['', 'Gender?'], ['M', 'M'], ['F', 'F']].map(([v, l]) => '<option value="' + v + '"' + (v === h.ICHGENDER ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>'
+                        : (h.ICHGENDER ? ' <span class="text-xs text-slate-400">(' + h.ICHGENDER + ')</span>' : '')) + '</td>'
+                    + '<td class="px-3 py-2">' + (h.fatherBase
+                        ? '<select data-code="' + esc(c.ICCODE.toUpperCase()) + '" class="prefix-pick mr-1 rounded-md border border-slate-300 text-xs p-0.5 bg-white">'
+                            + [['S/o', 'S/o'], ['D/o', 'D/o'], ['W/o', 'W/o'], ['', '—']].map(([v, l]) => '<option value="' + v + '"' + (v === h.fhPrefix ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' + esc(h.fatherBase)
+                        : '') + '</td>'
                     + '<td class="px-3 py-2">' + esc(h.designationName) + (h.EDCODE ? ' <span class="text-xs text-slate-400 font-mono">' + esc(h.EDCODE) + '</span>' : '') + '</td>'
                     + '<td class="px-3 py-2 text-xs">' + esc(h.ODCODE ? departments[h.ODCODE].name : '') + (h.ICHBPS ? '<div>BPS ' + esc(h.ICHBPS) + '</div>' : '') + '</td>'
                     + '<td class="px-3 py-2 text-xs font-mono">' + esc(h.ICHCNIC_BFORM) + c.phones.slice(0, 3).map((p) => '<div>' + esc(p) + '</div>').join('') + '</td>'
