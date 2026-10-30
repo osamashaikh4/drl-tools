@@ -94,7 +94,6 @@ function import_build_card(array $c, string $category, array $audit, array $desi
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payload  = json_decode((string)($_POST['payload'] ?? ''), true);
     $category = trim((string)($_POST['IC_CCODE'] ?? ''));
-    $dryRun   = isset($_POST['dry_run']);
     $targetBranches = isset($_POST['all_branches'])
         ? array_map('strval', array_keys(card_branches_list($conn, $connections)))
         : (array)($_POST['bcode'] ?? []);
@@ -135,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
             foreach ($ready as [$card, $holders]) {
-                $allStatus = array_merge($allStatus, card_write_to_branch($main_conn, $bconn, $bcode, $card, $holders, $dryRun));
+                $allStatus = array_merge($allStatus, card_write_to_branch($main_conn, $bconn, $bcode, $card, $holders, false));
             }
             oci_close($bconn);
         }
@@ -285,11 +284,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             <p class="text-xs text-slate-500 mt-3">Each branch is checked first: a card that already exists there is not inserted again, and only its missing holders are added.</p>
         </div>
 
-        <div id="actions" class="hidden flex items-center justify-between gap-4 pt-2">
-            <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="dryRun" name="dry_run" value="1" checked class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
-                <span class="text-sm font-semibold text-slate-700">Dry run <span class="font-normal text-slate-500">(show the inserts, change nothing)</span></span>
-            </label>
+        <div id="actions" class="hidden flex items-center justify-end gap-4 pt-2">
             <div class="flex items-center gap-4">
                 <a href="index.php" class="press px-6 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</a>
                 <button id="importButton" type="submit" class="px-8 py-3 rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
@@ -601,7 +596,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         function setImporting(on) {
             importButton.disabled = on;
             document.getElementById('importSpinner').classList.toggle('hidden', !on);
-            document.getElementById('importLabel').textContent = on ? (document.getElementById('dryRun').checked ? 'Checking…' : 'Importing…') : 'Import Cards';
+            document.getElementById('importLabel').textContent = on ? 'Importing…' :'Import Cards';
         }
         form.addEventListener('submit', function(e) {
             if (importButton.disabled) return e.preventDefault();
@@ -615,9 +610,8 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 iziToast.error({ title: 'Not yet', message: problem, position: 'topRight' }); // bottom-right would cover the Import button
                 return;
             }
-            const writing = !document.getElementById('dryRun').checked;
             const where = $('#allBranches').is(':checked') ? 'all branches' : ($('.branches_select').val() || []).length + ' branch(es)';
-            if (writing && !confirm('Import ' + ready.length + ' card(s) into ' + where + '? Cards that already exist on a branch are not inserted again.')) {
+            if (!confirm('Import ' + ready.length + ' card(s) into ' + where + '? Cards that already exist on a branch are not inserted again.')) {
                 e.preventDefault();
                 return;
             }
