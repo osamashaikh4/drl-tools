@@ -50,12 +50,9 @@ function import_build_card(array $c, string $category, array $audit, array $desi
         'ICISSUE_DATE' => $date($c['ICISSUE_DATE'] ?? null),
         'ICEXPIRY'     => $date($c['ICEXPIRY'] ?? null),
         'ICSTATUS'     => 'Y',
-        'ICEU'         => $audit['user'],
         'ICED'         => $audit['date'],
         'ICET'         => $audit['time'],
-        'ICEIP'        => $audit['ip'],
-        'ICEPC'        => $audit['pc'],
-        'ICREMARKS'    => 'Imported from Excel',
+        // ICEU, ICEIP, ICEPC and ICREMARKS are left empty on imported cards
     ];
     $stamp = ['ICHSTATUS' => 'Y', 'ICHEU' => $audit['user'], 'ICHED' => $audit['date'], 'ICHET' => $audit['time'], 'ICHEIP' => $audit['ip'], 'ICHEP' => $audit['pc']];
 
@@ -331,7 +328,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         let mapping = [];   // field per column
         let cards = [];     // built from grid + mapping
 
-        $('.branches_select').select2({ placeholder: 'Select target branches' });
+        $('.branches_select').select2({ placeholder: 'Select target branches', width: '100%' }); // the panel is hidden at this point, so select2 can't measure it
         function applyAllBranches() {
             const all = $('#allBranches').is(':checked');
             $('.branches_select').prop('disabled', all).trigger('change.select2');
@@ -394,6 +391,31 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             if (designations[n] !== undefined) return n;
             return Object.keys(designations).find((k) => norm(designations[k]) === n) || null;
         };
+        // When the name isn't exact: expand short words and allow a small spelling slip
+        // ("LAB ATTENDENT" -> Laboratory Attendant), but only if just one designation is that close.
+        const SHORT_WORDS = { LAB: 'LABORATORY', ASST: 'ASSISTANT', ASSTT: 'ASSISTANT', TECH: 'TECHNICIAN', MGR: 'MANAGER', SR: 'SENIOR', JR: 'JUNIOR' };
+        const loose = (s) => norm(s).replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').map((w) => SHORT_WORDS[w] || w).join(' ');
+        const editDistance = (a, b) => {
+            let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+            for (let i = 1; i <= a.length; i++) {
+                const cur = [i];
+                for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+                prev = cur;
+            }
+            return prev[b.length];
+        };
+        const looseDesignations = Object.keys(designations).map((k) => [k, loose(designations[k])]);
+        const guessCache = {};
+        const designationGuess = (v) => {
+            const key = loose(v);
+            if (key.length < 5) return null;
+            if (!(key in guessCache)) {
+                const limit = Math.max(1, Math.floor(key.length / 8));
+                const close = looseDesignations.filter(([, d]) => Math.abs(d.length - key.length) <= limit && editDistance(key, d) <= limit);
+                guessCache[key] = new Set(close.map(([, d]) => d)).size === 1 ? close[0][0] : null;
+            }
+            return guessCache[key];
+        };
         const departmentCode = (v) => {
             const n = norm(v);
             if (!n) return null;
@@ -420,7 +442,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             claim('cnic', isCnic);
             claim('phone', isPhone);
             claim('family', isFamily);
-            claim('designation', (v) => designationCode(v) !== null, 0.6);
+            claim('designation', (v) => (designationCode(v) || designationGuess(v)) !== null, 0.6);
             claim('retire', isYear);
             claim('bps', (v) => /^\d{1,2}$/.test(String(v).trim()) && Number(v) >= 1 && Number(v) <= 22);
             // The first two text columns after the code are usually holder and father names.
@@ -505,7 +527,10 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     h.fatherRaw = show(get(cells, 'father')).trim();
                     const dRaw = show(get(cells, 'designation')).trim();
                     h.EDCODE = designationCode(dRaw);
-                    if (dRaw && !h.EDCODE) current.warnings.push('designation "' + dRaw + '" not found — left empty');
+                    if (dRaw && !h.EDCODE) {
+                        h.EDCODE = designationGuess(dRaw);
+                        current.warnings.push(h.EDCODE ? 'designation "' + dRaw + '" read as ' + designations[h.EDCODE] : 'designation "' + dRaw + '" not found — left empty');
+                    }
                     h.designationName = h.EDCODE ? designations[h.EDCODE] : '';
                     const oRaw = show(get(cells, 'department')).trim();
                     h.ODCODE = departmentCode(oRaw);
