@@ -39,6 +39,10 @@ include __DIR__ . '/../header.php';
             <input type="hidden" id="from" value="<?= date('Y-m-d') ?>">
             <input type="hidden" id="to" value="<?= date('Y-m-d') ?>">
         </div>
+        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+            <input type="checkbox" id="pdsru" class="rounded border-slate-300 text-blue-600">
+            Also download the PDSRU sheet
+        </label>
 
         <div class="space-y-2 pt-1">
             <button id="runButton" type="submit" class="w-full px-6 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
@@ -100,34 +104,46 @@ include __DIR__ . '/../header.php';
                 position: 'topRight'
             });
 
-            const body = new FormData();
-            body.append('from', from);
-            body.append('to', to);
-            ($('#bcode').val() || []).forEach((b) => body.append('bcode[]', b));
+            // Fetches one workbook; resolves to the file to save, or throws the message to show.
+            async function fetchExport(pdsru) {
+                const body = new FormData();
+                body.append('from', from);
+                body.append('to', to);
+                ($('#bcode').val() || []).forEach((b) => body.append('bcode[]', b));
+                if (pdsru) body.append('pdsru', '1');
 
-            setRunning(true);
-            const started = Date.now();
-            const elapsed = () => Math.round((Date.now() - started) / 1000) + 's';
-            const tick = setInterval(() => $('#status').text('Running the queries … ' + elapsed()), 1000);
-            $('#status').text('Running the queries …');
-            try {
-                const res = await fetch('export.php', {
-                    method: 'POST',
-                    body
-                });
+                let res;
+                try {
+                    res = await fetch('export.php', {
+                        method: 'POST',
+                        body
+                    });
+                } catch (_) {
+                    throw new Error('Could not reach the server');
+                }
                 if (!res.ok) {
                     let msg = 'The export failed (HTTP ' + res.status + ')';
                     try {
                         msg = (await res.json()).error || msg;
                     } catch (_) {}
                     if (res.status === 401) msg = 'Signed out, sign in again';
-                    return showError(msg);
+                    throw new Error(msg);
                 }
                 // The file name the server chose: filename*=UTF-8''Dengue%20Report%20(…).xlsx
                 const cd = res.headers.get('Content-Disposition') || '';
                 const m = cd.match(/filename\*=UTF-8''([^;]+)/i);
-                const name = m ? decodeURIComponent(m[1]) : 'Dengue Report.xlsx';
-                const url = URL.createObjectURL(await res.blob());
+                const name = m ? decodeURIComponent(m[1]) : (pdsru ? 'PDSRU Dengue Report.xlsx' : 'Dengue Report.xlsx');
+                return {
+                    name,
+                    blob: await res.blob()
+                };
+            }
+
+            function save({
+                name,
+                blob
+            }) {
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = name;
@@ -135,9 +151,20 @@ include __DIR__ . '/../header.php';
                 a.click();
                 a.remove();
                 setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
+
+            setRunning(true);
+            const started = Date.now();
+            const elapsed = () => Math.round((Date.now() - started) / 1000) + 's';
+            const tick = setInterval(() => $('#status').text('Running the queries … ' + elapsed()), 1000);
+            $('#status').text('Running the queries …');
+            try {
+                // Both files are fetched together and saved only once both are ready.
+                const files = await Promise.all($('#pdsru').is(':checked') ? [fetchExport(false), fetchExport(true)] : [fetchExport(false)]);
+                files.forEach(save);
                 $('#status').text('Downloaded in ' + elapsed() + '.');
             } catch (err) {
-                showError('Could not reach the server');
+                showError(err.message);
             } finally {
                 clearInterval(tick);
                 setRunning(false);

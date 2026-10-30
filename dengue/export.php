@@ -1,6 +1,7 @@
 <?php
 // Dengue report: one workbook with the positive cases (Record) and the per-branch counts with a pie
 // chart (Count). Same layout as the old dengue app's report.php and count.php, now as two sheets.
+// With pdsru=1 it's the PDSRU copy: its own first heading and Technique / Sample Type columns.
 require_once __DIR__ . '/../bootstrap.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -39,6 +40,7 @@ ini_set('memory_limit', '-1');
 $from   = (string) ($_POST['from'] ?? '');
 $to     = (string) ($_POST['to'] ?? '');
 $bcodes = array_values(array_filter((array) ($_POST['bcode'] ?? []), 'is_string'));
+$pdsru  = ($_POST['pdsru'] ?? '') === '1';
 $isDate = fn($d) => ($t = DateTime::createFromFormat('!Y-m-d', $d)) && $t->format('Y-m-d') === $d;
 if (!$isDate($from) || !$isDate($to) || $from > $to) {
     fail(400, 'Pick a From date on or before the To date');
@@ -126,6 +128,7 @@ foreach ($rows as $i => $row) {
         'NA',
         'NA',
         $row['PIPVALUE'],
+        ...($pdsru ? ['Technique: ELISA', 'Specimen Type: Serum'] : []),
         date("M j, Y", strtotime($row['VISIT_DATE'])),
     ];
 }
@@ -158,7 +161,7 @@ $endYear    = date("Y", strtotime($to));
 $reportYear = $startYear === $endYear ? $startYear : $startYear . " - " . $endYear;
 
 $titles = [
-    "Vector Borne Diseases (VBDs)",
+    $pdsru ? "Provisional Disease Surveillance Response Unit (PDSRU)" : "Vector Borne Diseases (VBDs)",
     "Directorate General Health Services Sindh, Hyderabad",
     "Health Department, Government of Sindh",
     "Dengue Cases Line Listing Report " . $reportYear,
@@ -215,9 +218,11 @@ $sheet->setTitle("Record");
 $sheet->setShowGridlines(false);
 add_logo($sheet);
 
+// The PDSRU copy has two more columns, so Entered Date and the headings reach two columns further.
+$lastCol = $pdsru ? 'T' : 'R';
 foreach ($titles as $index => $text) {
     $row = 1 + $index;
-    $sheet->mergeCells("H{$row}:Q{$row}");
+    $sheet->mergeCells($pdsru ? "H{$row}:S{$row}" : "H{$row}:Q{$row}");
     $sheet->setCellValue("H{$row}", $text);
     $sheet->getStyle("H{$row}")->getAlignment()
         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
@@ -248,11 +253,11 @@ $headers = [
     ["N", "N", "Taluka"],
     ["O", "O", "UC"],
     ["P", "P", "Outcome of Disease"],
-    ["Q", "R", "Entered Date"],
+    ...($pdsru ? [["Q", "Q", "Technique"], ["R", "R", "Sample Type"], ["S", "T", "Entered Date"]] : [["Q", "R", "Entered Date"]]),
 ];
 $headerRow = 8;
 write_header($sheet, $headers, $headerRow);
-$sheet->getStyle("A{$headerRow}:R{$headerRow}")->applyFromArray([
+$sheet->getStyle("A{$headerRow}:{$lastCol}{$headerRow}")->applyFromArray([
     'font' => ['color' => ['rgb' => 'FFFFFF'], 'name' => 'Tahoma', 'size' => 8],
     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '138496']],
     'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_TOP],
@@ -263,7 +268,7 @@ $sheet->getRowDimension($headerRow)->setRowHeight(20.88);
 $row = 9;
 $lastRow = $row + count($records) - 1;
 if ($records) {
-    $sheet->getStyle("A{$row}:R{$lastRow}")->applyFromArray([
+    $sheet->getStyle("A{$row}:{$lastCol}{$lastRow}")->applyFromArray([
         'font' => ['name' => 'Tahoma', 'size' => 8],
         'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '777777']]],
@@ -278,6 +283,9 @@ if ($records) {
 
 $widths = ['A' => 4.57, 'B' => 6.14, 'C' => 9.88, 'D' => 5.33, 'E' => 4.57, 'F' => 2.22, 'G' => 1.57, 'H' => 18.22, 'I' => 13.74,
     'J' => 4.57, 'K' => 6.88, 'L' => 15.94, 'M' => 11.44, 'N' => 6.14, 'O' => 3.88, 'P' => 14.44, 'Q' => 14.44, 'R' => 0.74];
+if ($pdsru) {
+    $widths = array_merge($widths, ['R' => 14.44, 'S' => 14.44, 'T' => 0.78]);
+}
 foreach ($widths as $col => $width) {
     $sheet->getColumnDimension($col)->setWidth($width);
 }
@@ -380,6 +388,6 @@ $spreadsheet->setActiveSheetIndex(0);
 $writer = new Xlsx($spreadsheet);
 $writer->setIncludeCharts(true);
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment; filename*=UTF-8\'\'Dengue%20Report%20(' . rawurlencode($span("j-M-y")) . ').xlsx');
+header('Content-Disposition: attachment; filename*=UTF-8\'\'' . ($pdsru ? 'PDSRU%20' : '') . 'Dengue%20Report%20(' . rawurlencode($span("j-M-y")) . ').xlsx');
 $writer->save("php://output");
 exit();
