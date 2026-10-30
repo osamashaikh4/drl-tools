@@ -54,7 +54,7 @@ function import_build_card(array $c, string $category, array $audit, array $desi
         'ICET'         => $audit['time'],
         // ICEU, ICEIP, ICEPC and ICREMARKS are left empty on imported cards
     ];
-    $stamp = ['ICHSTATUS' => 'Y', 'ICHEU' => $audit['user'], 'ICHED' => $audit['date'], 'ICHET' => $audit['time'], 'ICHEIP' => $audit['ip'], 'ICHEP' => $audit['pc']];
+    $stamp = ['ICHSTATUS' => 'Y', 'ICHED' => $audit['date'], 'ICHET' => $audit['time']]; // ICHEU, ICHEIP and ICHEP are left empty too
 
     $holders = [[
         'ICCODE'          => $iccode,
@@ -221,6 +221,11 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     </select>
                 </label>
                 <span class="text-xs text-slate-500">A year on its own (e.g. 2029) is stored as 31 Dec of that year.</span>
+            </div>
+            <div id="designationMap" class="hidden mt-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                <div class="text-sm font-semibold text-slate-700">Designations not in the list</div>
+                <p class="text-xs text-slate-500 mb-3">Choose what each one should be. The closest match is picked where there is one.</p>
+                <div id="designationMapRows" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2"></div>
             </div>
         </div>
 
@@ -513,8 +518,9 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             const get = (cells, f) => (col(f) >= 0 ? cells[col(f)] : null);
             cards = [];
             let current = null;
+            const unmatched = new Map(); // designation as written (normalised) -> { raw, count }
             if (col('code') < 0) {
-                $('#previewPanel, #targetPanel, #actions').addClass('hidden');
+                $('#previewPanel, #targetPanel, #actions, #designationMap').addClass('hidden');
                 return;
             }
             dataRows().forEach(({ cells, row }) => {
@@ -528,8 +534,11 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     const dRaw = show(get(cells, 'designation')).trim();
                     h.EDCODE = designationCode(dRaw);
                     if (dRaw && !h.EDCODE) {
-                        h.EDCODE = designationGuess(dRaw);
-                        current.warnings.push(h.EDCODE ? 'designation "' + dRaw + '" read as ' + designations[h.EDCODE] : 'designation "' + dRaw + '" not found — left empty');
+                        // Not exact: use what was chosen under "Designations not in the list" (the closest match until then).
+                        const key = norm(dRaw);
+                        if (!unmatched.has(key)) unmatched.set(key, { raw: dRaw, count: 0 });
+                        unmatched.get(key).count++;
+                        h.EDCODE = key in designationPicks ? designationPicks[key] : designationGuess(dRaw);
                     }
                     h.designationName = h.EDCODE ? designations[h.EDCODE] : '';
                     const oRaw = show(get(cells, 'department')).trim();
@@ -578,8 +587,29 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 if (codes[k]) c.warnings.push('card code also on row ' + codes[k] + ' — only the first is imported');
                 else codes[k] = c.row;
             });
+            renderDesignationMap(unmatched);
             renderPreview();
         }
+
+        // Designations that aren't an exact name or code, each asked once for the whole sheet.
+        const designationPicks = {}; // normalised value -> chosen EDCODE ('' = leave empty)
+        const designationOptions = Object.keys(designations).sort((a, b) => designations[a].localeCompare(designations[b]));
+        function renderDesignationMap(unmatched) {
+            $('#designationMapRows').html([...unmatched].map(([key, { raw, count }]) => {
+                const picked = key in designationPicks ? designationPicks[key] : (designationGuess(raw) || '');
+                return '<label class="flex items-center gap-3 text-sm">'
+                    + '<span class="w-2/5 truncate font-medium text-slate-700" title="' + esc(raw) + '">' + esc(raw) + ' <span class="text-xs font-normal text-slate-400 tabular-nums">×' + count + '</span></span>'
+                    + '<select data-key="' + esc(key) + '" class="designation-pick flex-1 min-w-0 rounded-lg border text-sm p-1.5 bg-white ' + (picked ? 'border-slate-300' : 'border-amber-400 text-slate-500') + '">'
+                    + '<option value="">Leave empty</option>'
+                    + designationOptions.map((k) => '<option value="' + esc(k) + '"' + (k === picked ? ' selected' : '') + '>' + esc(designations[k]) + ' (' + esc(k) + ')</option>').join('')
+                    + '</select></label>';
+            }).join(''));
+            $('#designationMap').toggleClass('hidden', unmatched.size === 0);
+        }
+        $('#designationMapRows').on('change', '.designation-pick', function() {
+            designationPicks[this.dataset.key] = this.value;
+            rebuild();
+        });
 
         function familyLabel(f, holderGender) {
             const g = f.gender || (f.rcode === 'SP' ? (holderGender === 'M' ? 'F' : holderGender === 'F' ? 'M' : '') : '');
