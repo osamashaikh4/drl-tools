@@ -128,7 +128,7 @@ foreach ($rows as $i => $row) {
         'NA',
         'NA',
         $row['PIPVALUE'],
-        ...($pdsru ? ['Technique: ELISA', 'Specimen Type: Serum'] : []),
+        ...($pdsru ? ['ELISA', 'Serum'] : []),
         date("M j, Y", strtotime($row['VISIT_DATE'])),
     ];
 }
@@ -281,8 +281,26 @@ if ($records) {
     write_rows($sheet, $headers, $records, $row);
 }
 
-$widths = ['A' => 4.57, 'B' => 6.14, 'C' => 9.88, 'D' => 5.33, 'E' => 4.57, 'F' => 2.22, 'G' => 1.57, 'H' => 18.22, 'I' => 13.74,
-    'J' => 4.57, 'K' => 6.88, 'L' => 15.94, 'M' => 11.44, 'N' => 6.14, 'O' => 3.88, 'P' => 14.44, 'Q' => 14.44, 'R' => 0.74];
+$widths = [
+    'A' => 4.57,
+    'B' => 6.14,
+    'C' => 9.88,
+    'D' => 5.33,
+    'E' => 4.57,
+    'F' => 2.22,
+    'G' => 1.57,
+    'H' => 18.22,
+    'I' => 13.74,
+    'J' => 4.57,
+    'K' => 6.88,
+    'L' => 15.94,
+    'M' => 11.44,
+    'N' => 6.14,
+    'O' => 3.88,
+    'P' => 14.44,
+    'Q' => 14.44,
+    'R' => 0.74
+];
 if ($pdsru) {
     $widths = array_merge($widths, ['R' => 14.44, 'S' => 14.44, 'T' => 0.78]);
 }
