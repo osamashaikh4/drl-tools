@@ -354,6 +354,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 loadSheet(true);
             };
             reader.readAsArrayBuffer(file);
+            this.value = ''; // so choosing the same (fixed) file again reloads it
         });
         $('#sheet').on('change', () => loadSheet(true));
         $('#hasHeader').on('change', () => loadSheet(false));
@@ -591,12 +592,15 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         // Designations that aren't an exact name or code, each asked once for the whole sheet.
         const designationPicks = {}; // normalised value -> chosen EDCODE ('' = leave empty)
         const designationOptions = Object.keys(designations).sort((a, b) => designations[a].localeCompare(designations[b]));
+        let designationsOpen = 0; // shown with no match and not chosen yet ("Leave empty" picked by hand counts as chosen)
         function renderDesignationMap(unmatched) {
+            designationsOpen = 0;
             $('#designationMapRows').html([...unmatched].map(([key, { raw, count }]) => {
                 const picked = key in designationPicks ? designationPicks[key] : (designationGuess(raw) || '');
+                if (!(key in designationPicks) && !picked) designationsOpen++;
                 return '<label class="flex items-center gap-3 text-sm">'
                     + '<span class="w-2/5 truncate font-medium text-slate-700" title="' + esc(raw) + '">' + esc(raw) + ' <span class="text-xs font-normal text-slate-400 tabular-nums">×' + count + '</span></span>'
-                    + '<select data-key="' + esc(key) + '" class="designation-pick flex-1 min-w-0 rounded-lg border text-sm p-1.5 bg-white ' + (picked ? 'border-slate-300' : 'border-amber-400 text-slate-500') + '">'
+                    + '<select data-key="' + esc(key) + '" class="designation-pick flex-1 min-w-0 rounded-lg border text-sm p-1.5 bg-white ' + (picked || key in designationPicks ? 'border-slate-300' : 'border-amber-400 text-slate-500') + '">'
                     + '<option value="">Leave empty</option>'
                     + designationOptions.map((k) => '<option value="' + esc(k) + '"' + (k === picked ? ' selected' : '') + '>' + esc(designations[k]) + ' (' + esc(k) + ')</option>').join('')
                     + '</select></label>';
@@ -631,7 +635,8 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             const noGender = cards.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length;
             const members = cards.reduce((n, c) => n + c.family.length, 0);
             $('#previewSummary').html(cards.length + ' card' + (cards.length === 1 ? '' : 's') + ' · ' + members + ' family member' + (members === 1 ? '' : 's')
-                + (withWarnings ? ' · <span class="warn">' + withWarnings + ' with warnings</span>' : '') + (noGender ? ' · <span class="warn">' + noGender + ' without gender</span>' : '') + (skipped ? ' · <span class="text-red-600">' + skipped + ' will be skipped</span>' : ''));
+                + (withWarnings ? ' · <span class="warn">' + withWarnings + ' with warnings</span>' : '') + (noGender ? ' · <span class="warn">' + noGender + ' without gender</span>' : '')
+                + (designationsOpen ? ' · <span class="warn">' + designationsOpen + ' designation' + (designationsOpen === 1 ? '' : 's') + ' to choose</span>' : '') + (skipped ? ' · <span class="text-red-600">' + skipped + ' will be skipped</span>' : ''));
             $('#previewBody').html(cards.map((c) => {
                 const h = c.holder;
                 return '<tr class="' + (c.warnings.length ? 'bg-amber-50/60' : '') + '">'
@@ -671,7 +676,14 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         form.addEventListener('submit', function(e) {
             if (importButton.disabled) return e.preventDefault();
             const ready = cards.filter((c) => c.holder.ICHENAME);
-            const problem = !ready.length ? 'There are no cards to import.'
+            // Everything flagged in the preview has to be sorted out first (fix the sheet and choose it again for ⚠ rows).
+            const open = [
+                [cards.filter((c) => c.warnings.length).length, 'card(s) with ⚠ warnings'],
+                [cards.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length, 'holder(s) without gender'],
+                [designationsOpen, 'designation(s) to choose'],
+            ].filter(([n]) => n).map(([n, what]) => n + ' ' + what);
+            const problem = open.length ? 'Resolve these first: ' + open.join(', ') + '.'
+                : !ready.length ? 'There are no cards to import.'
                 : !$('#category').val() ? 'Choose a category for the imported cards.'
                 : (!$('#allBranches').is(':checked') && !($('.branches_select').val() || []).length) ? 'Choose at least one target branch, or All branches.'
                 : null;
