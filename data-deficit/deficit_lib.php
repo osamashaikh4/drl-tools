@@ -34,7 +34,7 @@ const FILL_TABLES = [
     'PBILLING' => [
         'columns' => ['BCODE', 'EMR', 'LAB_NO', 'CCODE', 'PBPSTATUS', 'TXTYPE', 'RCVD_AMOUNT', 'PBREMARKS', 'PBEUSER', 'PBED', 'PBET', 'PBEPC', 'PBEIP', 'CASH', 'CASHR', 'PBVNO', 'LIBCODE'],
         'filter'  => ['type' => 'range', 'datecol' => 'PBED', 'bcodeCol' => 'BCODE', 'mode' => 'eq'],
-        'defaults' => ['RCVD_AMOUNT' => 0],
+        'defaults' => ['RCVD_AMOUNT' => 0, 'TXTYPE' => "'CA'"],
     ],
     'PIVERIFIED' => [
         'columns' => ['BCODE', 'EMR', 'LAB_NO', 'CCODE', 'ICODE', 'PIVSTATUS', 'PIVREMARKS', 'PIVEU', 'PIVED', 'PIVET', 'PIVEPC', 'PIVEIP'],
