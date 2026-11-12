@@ -11,3 +11,4 @@ activity/data/*
 activity/models/*.onnx
 zk-time/data/*
 !zk-time/data/.htaccess
+deleted antibiotics.lock
