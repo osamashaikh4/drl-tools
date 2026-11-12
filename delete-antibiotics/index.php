@@ -19,9 +19,8 @@ include __DIR__ . '/../header.php';
     <form id="findForm" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div>
             <label for="labNos" class="block text-sm font-semibold text-slate-700 mb-1">Lab Nos</label>
-            <textarea id="labNos" rows="6" spellcheck="false" placeholder="25030103515, 26090802561&#10;one per line, or separated by commas or spaces"
+            <textarea id="labNos" rows="6" spellcheck="false"
                 class="w-full rounded-lg border-slate-300 border text-sm p-2.5 font-mono"></textarea>
-            <p class="text-xs text-slate-500 mt-1">The branch is the third pair of digits: 25 03 <b>01</b> 03515 is branch 01.</p>
         </div>
         <button id="findButton" type="submit" class="w-full px-6 py-3 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
             <span id="findSpinner" class="spinner hidden" aria-hidden="true"></span>
