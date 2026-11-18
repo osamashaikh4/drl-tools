@@ -230,6 +230,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 <table class="preview-table w-full text-sm">
                     <thead class="bg-slate-50 text-xs text-slate-600 sticky top-0">
                         <tr>
+                            <th class="pl-3 pr-1 py-2 w-6"><input type="checkbox" id="selectAll" checked title="Select all" class="rounded border-slate-300 text-blue-600 align-middle cursor-pointer"></th>
                             <th class="px-3 py-2 text-left">Row</th>
                             <th class="px-3 py-2 text-left">Card Code</th>
                             <th class="px-3 py-2 text-left">Holder</th>
@@ -368,6 +369,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 const r0 = grid[0] || [];
                 $('#hasHeader').prop('checked', r0.length > 0 && r0.every((v) => v === null || typeof v === 'string') && !r0.some((v) => looksLikeCode(v)));
             }
+            unselected.clear(); // a new sheet starts with every card selected
             mapping = guessMapping();
             renderMapping();
             rebuild();
@@ -518,7 +520,7 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 if (!cells.some((v) => v !== null && String(v).trim() !== '')) return;
                 const code = show(get(cells, 'code')).trim();
                 if (code) {
-                    current = { row: row, ICCODE: code, warnings: [], phones: [], family: [], holder: {} };
+                    current = { row: row, ICCODE: code, selected: !unselected.has(row), warnings: [], phones: [], family: [], holder: {} };
                     const h = current.holder;
                     h.ICHENAME = show(get(cells, 'name')).trim();
                     h.fatherRaw = show(get(cells, 'father')).trim();
@@ -526,9 +528,12 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     h.EDCODE = designationCode(dRaw);
                     if (dRaw && !h.EDCODE) {
                         // Not exact: use what was chosen under "Designations not in the list" (the closest match until then).
+                        // Only selected cards are listed there, so an unticked card's designation doesn't need choosing.
                         const key = norm(dRaw);
-                        if (!unmatched.has(key)) unmatched.set(key, { raw: dRaw, count: 0 });
-                        unmatched.get(key).count++;
+                        if (current.selected) {
+                            if (!unmatched.has(key)) unmatched.set(key, { raw: dRaw, count: 0 });
+                            unmatched.get(key).count++;
+                        }
                         h.EDCODE = key in designationPicks ? designationPicks[key] : designationGuess(dRaw);
                     }
                     h.designationName = h.EDCODE ? designations[h.EDCODE] : '';
@@ -581,7 +586,9 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                 [h.ICHCONTACT_NO, h.ICHEMERGENCYNO, h.ICHLANDLINE] = [c.phones[0] || '', c.phones[1] || '', c.phones[2] || ''];
                 if (c.phones.length > 3) c.warnings.push((c.phones.length - 3) + ' extra phone number(s) not stored');
                 if (c.family.length && c.ICCODE.length > 17) c.warnings.push('card code too long for family member codes — this card will be skipped');
+                // Duplicates only count among the selected cards: untick one copy to import the other.
                 const k = c.ICCODE.toUpperCase();
+                if (!c.selected) return;
                 if (codes[k]) c.warnings.push('card code also on row ' + codes[k] + ' — only the first is imported');
                 else codes[k] = c.row;
             });
@@ -618,6 +625,19 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
             prefixPicks[this.dataset.code] = this.value;
             rebuild();
         });
+        // Rows (sheet row numbers) the user unticked; every card is selected unless it's in here.
+        const unselected = new Set();
+        $('#previewBody').on('change', '.row-pick', function() {
+            const row = Number(this.dataset.row);
+            if (this.checked) unselected.delete(row);
+            else unselected.add(row);
+            rebuild();
+        });
+        $('#selectAll').on('change', function() {
+            if (this.checked) unselected.clear();
+            else cards.forEach((c) => unselected.add(c.row));
+            rebuild();
+        });
         $('#designationMapRows').on('change', '.designation-pick', function() {
             designationPicks[this.dataset.key] = this.value;
             rebuild();
@@ -630,16 +650,22 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         }
 
         function renderPreview() {
-            const skipped = cards.filter((c) => !c.holder.ICHENAME).length;
-            const withWarnings = cards.filter((c) => c.warnings.length).length;
-            const noGender = cards.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length;
-            const members = cards.reduce((n, c) => n + c.family.length, 0);
-            $('#previewSummary').html(cards.length + ' card' + (cards.length === 1 ? '' : 's') + ' · ' + members + ' family member' + (members === 1 ? '' : 's')
+            // Counts are for the selected cards only; unticked ones are left out of the import.
+            const picked = cards.filter((c) => c.selected);
+            const skipped = picked.filter((c) => !c.holder.ICHENAME).length;
+            const withWarnings = picked.filter((c) => c.warnings.length).length;
+            const noGender = picked.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length;
+            const members = picked.reduce((n, c) => n + c.family.length, 0);
+            const all = $('#selectAll')[0];
+            all.checked = cards.length > 0 && picked.length === cards.length;
+            all.indeterminate = picked.length > 0 && picked.length < cards.length;
+            $('#previewSummary').html(picked.length + (picked.length === cards.length ? '' : ' of ' + cards.length) + ' card' + (cards.length === 1 ? '' : 's') + ' selected · ' + members + ' family member' + (members === 1 ? '' : 's')
                 + (withWarnings ? ' · <span class="warn">' + withWarnings + ' with warnings</span>' : '') + (noGender ? ' · <span class="warn">' + noGender + ' without gender</span>' : '')
                 + (designationsOpen ? ' · <span class="warn">' + designationsOpen + ' designation' + (designationsOpen === 1 ? '' : 's') + ' to choose</span>' : '') + (skipped ? ' · <span class="text-red-600">' + skipped + ' will be skipped</span>' : ''));
             $('#previewBody').html(cards.map((c) => {
                 const h = c.holder;
-                return '<tr class="' + (c.warnings.length ? 'bg-amber-50/60' : '') + '">'
+                return '<tr class="' + (!c.selected ? 'opacity-50' : c.warnings.length ? 'bg-amber-50/60' : '') + '">'
+                    + '<td class="pl-3 pr-1 py-2 align-top"><input type="checkbox" class="row-pick rounded border-slate-300 text-blue-600 cursor-pointer" data-row="' + c.row + '"' + (c.selected ? ' checked' : '') + ' title="Import this card"></td>'
                     + '<td class="px-3 py-2 text-xs text-slate-400 tabular-nums">' + c.row + '</td>'
                     + '<td class="px-3 py-2 font-mono text-xs">' + esc(c.ICCODE) + (c.form ? '<div class="text-slate-400">form ' + esc(c.form) + '</div>' : '') + '</td>'
                     + '<td class="px-3 py-2">' + esc(h.ICHENAME || '—') + (h.genderAsked
@@ -655,9 +681,9 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
                     + '<td class="px-3 py-2 text-xs font-mono">' + esc(h.ICHCNIC_BFORM) + c.phones.slice(0, 3).map((p) => '<div>' + esc(p) + '</div>').join('') + '</td>'
                     + '<td class="px-3 py-2 text-xs">' + [['Retire', h.ICHDORETIREMENT || c.ICHDORETIREMENT], ['Expiry', c.ICEXPIRY], ['Issued', c.ICISSUE_DATE], ['DOB', c.ICHDOB]].filter(([, d]) => d).map(([l, d]) => '<div>' + l + ' ' + esc(d) + '</div>').join('') + '</td>'
                     + '<td class="px-3 py-2 text-xs">' + c.family.map((f) => '<div>' + esc(familyLabel(f, h.ICHGENDER)) + '</div>').join('')
-                    + c.warnings.map((w) => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') + '</td>'
+                    + (c.selected ? c.warnings.map((w) => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') : '') + '</td>'
                     + '</tr>';
-            }).join('') || '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">No rows with a card code.</td></tr>');
+            }).join('') || '<tr><td colspan="10"class="px-3 py-6 text-center text-slate-400">No rows with a card code.</td></tr>');
             $('#previewPanel, #targetPanel, #actions').toggleClass('hidden', cards.length === 0);
             $('#actions').toggleClass('flex', cards.length > 0);
         }
@@ -675,11 +701,13 @@ $step  = 'w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex item
         }
         form.addEventListener('submit', function(e) {
             if (importButton.disabled) return e.preventDefault();
-            const ready = cards.filter((c) => c.holder.ICHENAME);
-            // Everything flagged in the preview has to be sorted out first (fix the sheet and choose it again for ⚠ rows).
+            // Only the ticked cards are imported.
+            const picked = cards.filter((c) => c.selected);
+            const ready = picked.filter((c) => c.holder.ICHENAME);
+            // Everything flagged on a selected card has to be sorted out first (fix the sheet and choose it again, or untick the card).
             const open = [
-                [cards.filter((c) => c.warnings.length).length, 'card(s) with ⚠ warnings'],
-                [cards.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length, 'holder(s) without gender'],
+                [picked.filter((c) => c.warnings.length).length, 'selected card(s) with ⚠ warnings'],
+                [picked.filter((c) => c.holder.genderAsked && !c.holder.ICHGENDER).length, 'selected holder(s) without gender'],
                 [designationsOpen, 'designation(s) to choose'],
             ].filter(([n]) => n).map(([n, what]) => n + ' ' + what);
             const problem = open.length ? 'Resolve these first: ' + open.join(', ') + '.'
