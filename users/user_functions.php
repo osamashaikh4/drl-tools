@@ -244,6 +244,42 @@ function fstartup_row_exists($bconn, $ecode)
     return $row && (int)$row['CNT'] > 0;
 }
 
+// Repoints an employee's existing FSTARTUP row(s) on a branch to that branch's BCODE.
+function update_fstartup_bcode($bconn, $bcode, $ecode)
+{
+    $sql   = "UPDATE FSTARTUP SET BCODE = :bcode WHERE ECODE = :ecode";
+    $binds = [':bcode' => $bcode, ':ecode' => $ecode];
+
+    if (DRY_RUN) {
+        return [[
+            'bcode'  => $bcode,
+            'query'  => render_sql_preview($sql, $binds),
+            'status' => "DRY RUN — FSTARTUP row already exists, BCODE would be updated"
+        ]];
+    }
+
+    $stmt = @oci_parse($bconn, $sql);
+    if ($stmt) {
+        foreach ($binds as $k => &$v) {
+            oci_bind_by_name($stmt, $k, $v);
+        }
+        unset($v);
+        if (@oci_execute($stmt, OCI_COMMIT_ON_SUCCESS)) {
+            return [[
+                'bcode'  => $bcode,
+                'query'  => "UPDATE FSTARTUP SET BCODE = '{$bcode}' WHERE ECODE = '{$ecode}'",
+                'status' => "FSTARTUP row already existed — BCODE updated to {$bcode}"
+            ]];
+        }
+    }
+    $err = oci_error($stmt ?: $bconn);
+    return [[
+        'bcode'  => $bcode,
+        'query'  => "UPDATE FSTARTUP SET BCODE = '{$bcode}' WHERE ECODE = '{$ecode}'",
+        'status' => "FSTARTUP BCODE update failed: " . ($err['message'] ?? 'Unknown error')
+    ]];
+}
+
 function branch_privs_row_exists($bconn, $bcode, $ecode)
 {
     if (!$bconn) {
@@ -533,13 +569,9 @@ function insert_fstartup_row($bconn, $bcode, $ecode, $dcode, $userType)
         ':fseff_from' => $fseffFrom,
     ];
 
+    // Never duplicate: an existing row is repointed at this branch instead.
     if (fstartup_row_exists($bconn, $ecode)) {
-        $results[] = [
-            'bcode'  => $bcode,
-            'query'  => "FSTARTUP (SBLOCK: {$sblock})",
-            'status' => "FSTARTUP row already exists — skipped"
-        ];
-        return $results;
+        return update_fstartup_bcode($bconn, $bcode, $ecode);
     }
 
     if (DRY_RUN) {
@@ -1188,9 +1220,14 @@ function copy_user_to_branch($mainConn, $bconn, $bcode, $ecode, $dbPassword = ''
     // previously deactivated/transferred-out record).
     $results = array_merge($results, set_emp_estatus($bconn, $bcode, $ecode, 'Y'));
 
-    // 2. Copy FSTARTUP rows (matches ECODE or EUNAME)
-    $fstartupRes = $copyTableRows('FSTARTUP', 'ECODE = :ecode', [':ecode' => $ecode]);
-    $results = array_merge($results, $fstartupRes);
+    // 2. FSTARTUP: never duplicate. If the target branch already has a row for
+    //    this employee, point it at the target branch (BCODE); otherwise copy.
+    if (fstartup_row_exists($bconn, $ecode)) {
+        $results = array_merge($results, update_fstartup_bcode($bconn, $bcode, $ecode));
+    } else {
+        $fstartupRes = $copyTableRows('FSTARTUP', 'ECODE = :ecode', [':ecode' => $ecode]);
+        $results = array_merge($results, $fstartupRes);
+    }
 
     // 2b. Insert BRANCH_PRIVS row (branch access grant on the target branch)
     $results = array_merge($results, insert_branch_privs_row($bconn, $bcode, $ecode));
