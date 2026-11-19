@@ -18,7 +18,7 @@ if (isset($_GET['check'])) {
 
     // Release the session lock so the parallel branch requests from one browser run concurrently.
     session_write_close();
-    ini_set('max_execution_time', '120');
+    ini_set('max_execution_time', '0');
 
     require_once __DIR__ . '/conn.php';
     require_once __DIR__ . '/cards/card_functions.php';

@@ -5,7 +5,7 @@ include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/user_functions.php';
 
 // Several users onto several branches can take a while.
-set_time_limit(600);
+set_time_limit(0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['ecode'])) {

@@ -98,7 +98,7 @@ if (isset($_GET['scan'])) {
         exit();
     }
     session_write_close();
-    set_time_limit(180);
+    set_time_limit(0);
 
     $cidr = ns_cidr((string) $_GET['scan']);
     if ($cidr === null) {

@@ -48,7 +48,7 @@ if (isset($_GET['api'])) {
         $reply(['ok' => false, 'error' => 'Logged out'], 401);
     }
     session_write_close();
-    set_time_limit(120);
+    set_time_limit(0);
 
     $i = (int) ($_REQUEST['i'] ?? -1);
     $d = cctv_device($i);

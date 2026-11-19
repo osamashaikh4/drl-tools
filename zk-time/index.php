@@ -20,7 +20,7 @@ if (isset($_GET['api'])) {
     }
     // Release the session lock so several devices can be worked on at once.
     session_write_close();
-    set_time_limit(300);
+    set_time_limit(0);
 
     $api = (string) $_GET['api'];
     $key = (string) ($_REQUEST['d'] ?? '');
@@ -221,7 +221,7 @@ if (isset($_GET['api'])) {
         // Each reads the whole log several times, so a big log takes minutes.
         case 'editpunch':
         case 'delpunch':
-            set_time_limit(900);
+            set_time_limit(0);
             $old = zk_record_input(['time' => $_POST['o_time'] ?? '', 'userid' => $_POST['o_userid'] ?? '', 'punch' => $_POST['o_punch'] ?? '', 'verify' => $_POST['o_verify'] ?? '']);
             if (is_string($old)) {
                 $reply(['ok' => false, 'error' => $old]);

@@ -52,7 +52,7 @@ if (isset($_GET['check']) || isset($_GET['details'])) {
 
     // Release the session lock so every host from one browser is checked at the same time.
     session_write_close();
-    set_time_limit(180);
+    set_time_limit(0);
 
     $i = (int) ($_GET['check'] ?? $_GET['details']);
     if (!isset($hosts[$i])) {

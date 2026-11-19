@@ -4,7 +4,7 @@ require_once __DIR__ . '/../auth.php';
 include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/card_functions.php';
 
-set_time_limit(600);
+set_time_limit(0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sourceBcode    = trim($_POST['source_bcode'] ?? '');

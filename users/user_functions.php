@@ -139,7 +139,10 @@ function connect_branch_db($bcode, $connections, $user = 'drl', $pass = 'drl')
     if ($bcode == '13' || $bcode == '24' || $bcode == '27') {
         $sid = "dbnc";
     }
-    $bconn = @oci_connect($user, $pass, $connections[$bcode] . '/' . $sid);
+    // Easy Connect Plus (client 19c+): an offline branch fails within seconds instead of hanging.
+    // transport_connect_timeout = TCP handshake, connect_timeout = the whole connect including the login.
+    $dsn = $connections[$bcode] . '/' . $sid . '?transport_connect_timeout=5&connect_timeout=10';
+    $bconn = @oci_connect($user, $pass, $dsn);
     return $bconn ? $bconn : false;
 }
 

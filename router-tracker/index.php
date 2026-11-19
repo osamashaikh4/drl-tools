@@ -16,7 +16,7 @@ if (isset($_GET['api'])) {
         $reply(['ok' => false, 'error' => 'Logged out'], 401);
     }
     session_write_close();
-    set_time_limit(120);
+    set_time_limit(0);
 
     $key = (string) ($_GET['r'] ?? '');
     if (!isset($routers[$key])) {

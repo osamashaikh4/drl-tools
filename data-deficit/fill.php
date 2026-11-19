@@ -6,7 +6,7 @@ require_once __DIR__ . '/deficit_lib.php';
 header('Content-Type: application/json');
 installJsonErrorHandler();
 
-set_time_limit(600);
+set_time_limit(0);
 
 $bcode  = $_POST['bcode'] ?? '';
 $group  = $_POST['group'] ?? '';

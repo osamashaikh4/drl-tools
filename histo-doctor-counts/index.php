@@ -21,7 +21,7 @@ if (isset($_GET['dept'])) {
 
     // Release the session lock so both departments from one browser run at the same time.
     session_write_close();
-    set_time_limit(600);
+    set_time_limit(0);
 
     $dept = (string) $_GET['dept'];
     $from = (string) ($_GET['from'] ?? '');

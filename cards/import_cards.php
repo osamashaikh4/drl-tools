@@ -4,7 +4,7 @@ require_once __DIR__ . '/../auth.php';
 include_once __DIR__ . '/conn.php';
 include_once __DIR__ . '/card_functions.php';
 
-set_time_limit(1800);
+set_time_limit(0);
 
 const IMPORT_RELATIONS = ['FA', 'MO', 'SP', 'CS', 'CD'];
 

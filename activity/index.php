@@ -53,7 +53,7 @@ if (isset($_GET['api'])) {
 
         // Every channel of every CCTV device, for choosing the cameras to watch.
         case 'channels':
-            set_time_limit(120);
+            set_time_limit(0);
             $out = [];
             foreach (array_keys($CCTV['devices'] ?? []) as $i) {
                 $d = cctv_device($i);
